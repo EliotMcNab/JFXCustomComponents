@@ -1,0 +1,34 @@
+/* ==================================== */
+/*             HOVER COLOR              */
+/* ==================================== */
+
+.hover-color {
+    -fx-arc-height: 15;
+    -fx-arc-width: 15;
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.5, 2, 2);
+    -fx-fill: transparent;
+}
+
+/* ==================================== */
+/*             BORDER FRAME             */
+/* ==================================== */
+
+.border-frame {
+    -fx-text-location: top
+}
+
+.border-frame .corner {
+    -fx-size: 50;
+    -fx-fill: white;
+    -fx-thickness: 20;
+    -fx-arc-width: 10;
+    -fx-arc-height: 10;
+}
+
+.border-frame .label {
+    -fx-font-size: 30;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+

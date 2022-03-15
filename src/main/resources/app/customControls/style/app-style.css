@@ -1,0 +1,24 @@
+.root {
+    background-color: #1E2022;
+    -fx-shadow-highlight-color: #292C2E;
+    -accent-blue: #008CFF;
+}
+
+#BACKGROUND {
+    -fx-background-color: background-color;
+}
+
+
+
+.loop-slider:focused .thumb {
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.5, 2, 2);
+}
+
+
+/* ==================================== */
+/*                POPUP                 */
+/* ==================================== */
+
+.popup .popup-text {
+    -fx-text-fill: white;
+}

@@ -1,0 +1,11 @@
+.hsv-color-select .pointer {
+    -fx-background-color: transparent;
+    -fx-pref-width: 20;
+    -fx-pref-height: 20;
+
+    -fx-border-width: 3;
+    -fx-border-radius: 20;
+    -fx-border-color: white;
+
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.3, 2, 2);
+}

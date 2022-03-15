@@ -1,0 +1,132 @@
+/* COLORS */
+
+* {
+    /*background*/
+    -background1: #1E2022;
+    -background2: #26292E;
+
+    /*emphasis*/
+    -accent-gray: #535A6A;
+    -accent-blue: #008CFF;
+
+    /*light*/
+    -light-gray: #727B90;
+
+}
+
+/* BACKGROUNDS */
+
+#POPUP_BACKGROUND {
+    -fx-background-color: -background1;
+    -fx-background-radius: 10;
+}
+
+#POPUP_BACKGROUND .label {
+    -fx-text-fill: white;
+    -fx-font-size: 12;
+}
+
+/* COLOR DISPLAY */
+
+#COLOR_DISPLAY {
+    -fx-background-radius: 0;
+    -fx-arc-height: 0;
+    -fx-arc-width: 0;
+    -fx-stroke: transparent;
+}
+
+#CURRENT_COLOR {
+    -fx-arc-height: 15;
+    -fx-arc-width: 15;
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.5, 2, 2);
+}
+
+/* SLIDERS */
+
+.slider .thumb {
+    -fx-background-color: transparent;
+
+    -fx-pref-height: 16;
+    -fx-pref-width: 16;
+
+    -fx-border-width: 3;
+    -fx-border-color: white;
+    -fx-border-radius: 10;
+}
+
+.slider .track {
+    -fx-pref-height: 10;
+    -fx-background-radius: 10;
+}
+
+#COLOR_SLIDER .track {
+    -fx-background-color: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet, red);
+}
+
+#COLOR_TRANSPARENCY .track {
+    -fx-background-color: linear-gradient(to right, rgba(255, 255, 255, 0.7), rgba(41, 41, 41, 0.5));
+}
+
+/* COMBO BOX */
+
+.combo-box {
+    -fx-font-size: 10;
+    -fx-background-color: transparent;
+
+    -fx-border-width: 0 0 3 0;
+    -fx-border-color: -accent-gray;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: -accent-gray;
+}
+
+.combo-box .arrow-button {
+    -fx-padding: 0 7 0 0
+}
+
+.combo-box .arrow {
+    -fx-min-width: 5;
+    -fx-min-height: 5;
+    -fx-padding: 1;
+    -fx-background-color: -accent-gray;
+}
+
+.combo-box:hover {
+    -fx-border-color: -light-gray;
+}
+
+/* TEXT FIELDS */
+
+.text-field {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+
+    -fx-border-width: 0 0 3 0;
+    -fx-border-color: -accent-gray;
+
+    -fx-text-fill: -accent-gray;
+}
+
+.text-field:hover {
+    -fx-border-color: -light-gray;
+}
+
+/* ICONS */
+
+.ikonli-font-icon {
+    -fx-fill: white;
+    -fx-icon-size: 16;
+}
+
+/* POINTER */
+
+#POINTER {
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.3, 2, 2);
+}
+
+/* BACKGROUND */
+
+#BACKGROUND {
+    -fx-background-color: -background1;
+}

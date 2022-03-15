@@ -1,0 +1,149 @@
+* {
+    -color-accent-gray: #535A6A;
+    -color-light-gray : #727B90;
+}
+
+.ikonli-font-icon {
+    -fx-fill     : white;
+    -fx-icon-size: 18;
+}
+
+.current-color {
+    -fx-background-radius: 10;
+}
+
+.color-picker {
+    -fx-background-color: #1E2022;
+}
+
+/* ==================================== */
+/*                BORDER                */
+/* ==================================== */
+
+.text-field,
+.combo-box {
+    -fx-border-width     : 0 0 3 0;
+    -fx-border-color     : -color-accent-gray;
+}
+
+.text-field:hover,
+.text-field:focused,
+.combo-box:hover,
+.combo-box:focused {
+    -fx-background-color : transparent;
+    -fx-border-color     : -color-light-gray;
+    -fx-text-fill        : -color-light-gray;
+}
+
+/* ==================================== */
+/*               SLIDERS                */
+/* ==================================== */
+
+.hue-slider .thumb,
+.value-slider .thumb {
+    -fx-pref-height: 12;
+    -fx-pref-width : 12;
+
+    -fx-background-color: transparent;
+
+    -fx-border-insets: -3;
+    -fx-border-width : 3;
+    -fx-border-color : white;
+    -fx-border-radius: 20;
+
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.5, 2, 2);
+
+}
+
+.hue-slider .track,
+.value-slider .track {
+    -fx-pref-height: 12;
+    -fx-background-radius: 12;
+    -fx-effect: dropShadow(gaussian, rgba(18, 18, 23, 0.5), 10, 0.2, 1, 1);
+}
+
+/* hue slider */
+
+.hue-slider .track{
+    -fx-background-color:
+            -fx-shadow-highlight-color 50%,
+            linear-gradient(to right,
+            red,
+            orange,
+            yellow,
+            green,
+            blue,
+            indigo,
+            violet,
+            red
+            );
+}
+
+/* value slider */
+
+.value-slider .track {
+    -fx-background-color:
+            -fx-shadow-highlight-color 50%,
+            linear-gradient(to right,
+            white,
+            black
+            );
+}
+
+/* ==================================== */
+/*              TEXT FIELD              */
+/* ==================================== */
+
+.text-field {
+    -fx-background-color : transparent;
+    -fx-background-radius: 0;
+
+    -fx-text-fill        : -color-accent-gray;
+}
+
+/* ==================================== */
+/*               COMBO BOX              */
+/* ==================================== */
+
+.combo-box {
+    -fx-background-color : transparent;
+    -fx-border-width     : 0 0 3 0;
+    -fx-border-color     : -color-accent-gray;
+}
+
+/* list cell */
+
+.combo-box .list-cell {
+    -fx-text-fill        : -color-accent-gray;
+}
+
+.combo-box:hover .list-cell,
+.combo-box:focused .list-cell {
+    -fx-text-fill: -color-light-gray;
+}
+
+/* arrow button */
+
+.combo-box .arrow-button .arrow {
+    -fx-background-color: -color-accent-gray;
+}
+
+.combo-box:hover .arrow-button .arrow,
+.combo-box:focused .arrow-button .arrow {
+    -fx-background-color: -color-light-gray;
+}
+
+/* popup */
+
+.combo-box .list-view .list-cell {
+    -fx-text-fill: -color-accent-gray;
+}
+
+.combo-box .list-view .list-cell:focused,
+.combo-box .list-view .list-cell:hover{
+    -fx-text-fill: white;
+}
+
+.combo-box .list-view {
+    -fx-background-color: -color-light-gray;
+}
