@@ -68,19 +68,34 @@ public class MaterialColorPicker extends Control {
     //            CONSTRUCTOR
     // ===================================
 
+    /**
+     * Default {@link MaterialColorPicker} constructor
+     */
     public MaterialColorPicker() {
         this(DEFAULT_COLOR);
     }
 
+    /**
+     * {@link MaterialColorPicker} constructor
+     * @param initialColor ({@link Color}): starting color for the color picker
+     */
     public MaterialColorPicker(Color initialColor) {
         this(initialColor, DEFAULT_COLOR_FORMAT);
     }
 
+    /**
+     * {@link MaterialColorPicker} constructor
+     * @param initialColor ({@link Color}): starting color for the color picker
+     * @param initialColorFormat ({@link ColorFormat}): starting color format for the color picker
+     */
     public MaterialColorPicker(Color initialColor, ColorFormat initialColorFormat) {
 
         color = new SimpleObjectProperty<>(this, "color", DEFAULT_COLOR);
         colorFormat = new SimpleObjectProperty<>(this, "colorFormat", DEFAULT_COLOR_FORMAT);
 
+        // saves the starting color & color format to the color picker
+        setColor(initialColor);
+        setColorFormat(initialColorFormat);
     }
 
     // ===================================
@@ -111,7 +126,7 @@ public class MaterialColorPicker extends Control {
 
     /**
      * Property for the {@link MaterialColorPicker}'s color format
-     * @return ObjectProperty(Color)): the color picker's associated color format
+     * @return (ObjectProperty(Color)): the color picker's associated color format
      */
     public ObjectProperty<ColorFormat> colorFormatProperty() {
         return colorFormat;

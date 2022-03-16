@@ -10,19 +10,30 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
  * Visual overlay made up of {@link BorderLine Borderlines} displaying the corners of a container with the possibility
- * to display text along its edges. Text will be automatically hidden when there is not enough space to display it<br><br>
- *
- * <u><i>text locations</i></u>: "top", "right", "bottom", "left", "center"<br><br>
- *
- * <u><i>css properties</i></u> :<br>
- * <list>
- *     <li>-fx-text-location: where to display text in the frame</li>
- * </list>
+ * to display text along its edges. Text will be automatically hidden when there is not enough space to display it<br>
+ * <br>
+ * <u><i>CSS Pseudo-class</i></u> : border-frame<br>
+ * <br>
+ * <u><i>CSS Properties</i></u> :<br>
+ * <ul>
+ *     <li>
+ *         -fx-text-location: ["top" | "right" | "bottom" | "left" | "center"]<br>
+ *         where display text is placed if there is enough space
+ *     </li>
+ * </ul>
+ * <u><i>Substructure</i></u> :<br>
+ * <ul>
+ *     <li>label: {@link Label}</li>
+ *     <li>border-line: {@link BorderLine} (x4)</li>
+ * </ul>
+ * @implNote There still are some issues with text being taken into account to determine the minimal size of the
+ * {@link BorderFrame} even if it cannot be displayed, which results in large amounts of whiteSpace.
+ * THis is probably because minSize is set before the text is hidden, which must create some issues with the Pane
+ * being used to regroup components
  */
 public class BorderFrame extends Region {
 
@@ -65,7 +76,7 @@ public class BorderFrame extends Region {
     private final ChangeListener<String> locationListener;
 
     /*          INITIALISATION          */
-    private boolean hasInitialised = false;
+    private final boolean hasInitialised;
 
     // ===================================
     //           CONSTRUCTOR
@@ -168,24 +179,37 @@ public class BorderFrame extends Region {
     //          INITIALISATION
     // ===================================
 
+    /**
+     * Adds the necessary style classes
+     */
     private void initialise() {
-        // frame
         getStyleClass().setAll("border-frame");
-        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     }
 
+    /**
+     * Adds all the components as children to the {@link BorderFrame}
+     */
     private void populate() {
 
-        resize();
+        // determines the BorderFrame's minimal size
+        calculateMinSize();
 
+        // adds the corners and the label as children
         Pane pane = new Pane();
         pane.getChildren().addAll(corners);
         pane.getChildren().add(label);
 
+        // saves all the children to the BorderFrame
         getChildren().add(pane);
 
     }
 
+    /**
+     * Initialises and saves each {@link BorderLine} into an array of corners
+     * @param cornerSize (double): the width & height of each corner
+     * @param cornerThickness (double): the thickness of each line
+     * @param cornerColor ({@link Color}): the color of each corner
+     */
     private void initialiseCorners(final double cornerSize, final double cornerThickness, final Color cornerColor) {
 
         corners[0] = new BorderLine(Orientation.TOP_LEFT, cornerSize, cornerThickness, cornerColor);
@@ -195,6 +219,9 @@ public class BorderFrame extends Region {
 
     }
 
+    /**
+     * Adds the necessary listeners to the {@link BorderFrame}'s components
+     */
     private void registerListeners() {
         // resizing
         widthProperty().addListener(resizeListener);
@@ -208,8 +235,12 @@ public class BorderFrame extends Region {
     //             ACCESSORS
     // ===================================
 
-    // corner size
-
+    /**
+     * Size {@link Property} for the {@link BorderLine} corners
+     * @return (DoubleProperty): the size property of each corners
+     * @implNote size property for top-left corner is used but since corners vary in unison in this case
+     * this is not an issue
+     */
     public DoubleProperty cornerSizeProperty() {
         return corners[0].sizeProperty();
     }
@@ -237,7 +268,12 @@ public class BorderFrame extends Region {
         refreshDisplay();
     }
 
-    // corner thickness
+    /**
+     * Thickness {@link Property} for the {@link BorderLine} corners
+     * @return (DoubleProperty): the Thickness property of each corners
+     * @implNote Thickness property for top-left corner is used but since corners vary in unison in this case
+     * this is not an issue
+     */
     public DoubleProperty cornerThicknessProperty() {
         return corners[0].thicknessProperty();
     }
@@ -265,14 +301,19 @@ public class BorderFrame extends Region {
         refreshDisplay();
     }
 
-    // corner color
+    /**
+     * Color {@link Property} for the {@link BorderLine} corners
+     * @return (DoubleProperty): the Thickness property of each corners
+     * @implNote Thickness property for top-left corner is used but since corners vary in unison in this case
+     * this is not an issue
+     */
     public ObjectProperty<Color> colorProperty() {
         return corners[0].colorProperty();
     }
 
     /**
      * Gets the {@link Color} of the {@link BorderLine BorderLines} making up the {@link BorderFrame}
-     * @return
+     * @return (CColor): the color of the BorderFrame's corners
      */
     public Color getColor() {
         return corners[0].getColor();
@@ -293,7 +334,10 @@ public class BorderFrame extends Region {
         refreshDisplay();
     }
 
-    // text
+    /**
+     * Text {@link Property} for the {@link BorderFrame}
+     * @return (StringProperty): the BorderFrame's text property
+     */
     public StringProperty textProperty() {
         return text;
     }
@@ -316,7 +360,10 @@ public class BorderFrame extends Region {
         refreshDisplay();
     }
 
-    // font
+    /**
+     * {@link Font} {@link Property} for the {@link BorderFrame}
+     * @return (ObjectProperty(Font)): the BorderFrame's font property
+     */
     public ObjectProperty<Font> fontProperty() {
         return fontType;
     }
@@ -339,7 +386,10 @@ public class BorderFrame extends Region {
         refreshDisplay();
     }
 
-    // font size
+    /**
+     * Font size {@link Property} for the {@link BorderFrame}
+     * @return (DoubleProperty): the BorderFrame's font size property
+     */
     public DoubleProperty textSizeProperty() {
         return textSize;
     }
@@ -359,14 +409,20 @@ public class BorderFrame extends Region {
     public void setTextSize(final double newFontSize) {
         textSize.setValue(newFontSize);
 
+        // retrieves the old font & uses it to create a new, resized version
         final String fontFamily = label.getFont().getFamily();
         final Font resizedFont  = new Font(fontFamily, newFontSize);
+        // applies the new font
         label.setFont(resizedFont);
 
+        // repositions the text
         refreshDisplay();
     }
 
-    // text location
+    /**
+     * Text location {@link Property} for the {@link BorderFrame}
+     * @return (StringProperty): the BorderFrame's text location property
+     */
     public StringProperty textLocationProperty() {
         return (StringProperty) textLocation;
     }
@@ -392,7 +448,11 @@ public class BorderFrame extends Region {
     //             RESIZING
     // ===================================
 
-    private void resize() {
+    /**
+     * Calculates the minimal size possible for the {@link BorderFrame}
+     * so that all {@link BorderLine} corners are visible
+     */
+    private void calculateMinSize() {
         final double minSize = corners[0].getSize() * 2;
         setMinSize(minSize, minSize);
     }
@@ -401,20 +461,32 @@ public class BorderFrame extends Region {
     //            POSITIONING
     // ===================================
 
+    /**
+     * Handles repositioning the components inside the {@link BorderFrame}
+     */
     private void refreshDisplay() {
 
         // waits for complete initialisation
         if (!hasInitialised) return;
 
+        // repositions the corners
         positionCorners();
+
+        // repositions the text if there is enough space, otherwise hides it
         if (canDisplayText()) positionText(); else hideText();
     }
 
+    /**
+     * Repositions the corners
+     */
     private void positionCorners() {
+        // determines the size of the BorderFrame
         final double width = getWidth();
         final double height = getHeight();
+        // determines the size of each corner
         final double cornerSize = getCornerSize();
 
+        // determines the necessary adjustments to be made along the x-axis & y-axis to repository the corners
         final double deltaX     = width - cornerSize;
         final double deltaY     = height - cornerSize;
 
@@ -431,65 +503,94 @@ public class BorderFrame extends Region {
         corners[3].setLayoutY(deltaY);
     }
 
+    /**
+     * Repositions the {@link BorderFrame}'s text
+     */
     private void positionText() {
+        // shows the text in case it was previously hidden
         showText();
 
+        // gets the available width of the BorderFrame
         final double frameWidth = getWidth();
+        // gets the space taken up by the label
         final double textWidth = label.getWidth();
+        // determines where to place the text
         final double deltaX = (frameWidth - textWidth) / 2;
 
+        // determines where to place the text based on its location
         switch (getTextLocation()) {
             case "top"    -> label.setLayoutX(deltaX);
             case "center" -> {
+                // calculates y-displacement to the center...
                 final double frameHeight = getHeight();
                 final double textHeight = label.getHeight();
                 final double deltaY = (frameHeight - textHeight) / 2;
 
+                // ...and applies displacement to center
                 label.setLayoutX(deltaX);
                 label.setLayoutY(deltaY);
             }
             case "bottom" -> {
+                // calculates y-displacement to the bottom...
                 final double frameHeight = getHeight();
                 final double textHeight = label.getHeight();
                 final double deltaY = frameHeight - textHeight;
 
+                // ...and applies displacement to the bottom
                 label.setLayoutX(deltaX);
                 label.setLayoutY(deltaY);
             }
             case "left" -> {
+                // calculates y-displacement to the left (same as for center)...
                 final double frameHeight = getHeight();
                 final double textHeight = label.getHeight();
                 final double deltaY = (frameHeight - textHeight) / 2;
 
+                // ...and applies displacement to the left
                 label.setLayoutY(deltaY);
             }
             case "right" -> {
+                // recalculates x-displacement to the right & calculate y-displacement...
                 final double frameHeight = getHeight();
                 final double textHeight = label.getHeight();
                 final double deltaY = (frameHeight - textHeight) / 2;
                 final double deltaXRight = frameWidth - textWidth;
 
+                // ...and applies it to the right
                 label.setLayoutX(deltaXRight);
                 label.setLayoutY(deltaY);
             }
         }
     }
 
+    /**
+     * Determine if the current text has enough space available to it to be displayed
+     * @return (boolean): whether the current text can be displayed
+     */
     private boolean canDisplayText() {
 
+        // determines if the text can be displayed based on its location
         return switch (getTextLocation()) {
+            // top, center & bottom only depend on available width
             case "top", "center", "bottom" -> {
-                final double textWidth      = label.getWidth();
-                final double frameWidth     = getWidth();
+                // calculates the available width
+                final double textWidth = label.getWidth();
+                final double frameWidth = getWidth();
                 final double availableSpace = frameWidth - getCornerSize() * 2;
 
+                // determines if the text has enough space available to be displaced
+                // & checks that the text itself has a width (ie: there is text to show)
                 yield  availableSpace >= textWidth && textWidth != 0;
             }
+            // left & right only depend on available height
             case "left", "right" -> {
-                final double textHeight     = label.getHeight();
-                final double frameHeight    = getHeight();
+                // calculates the available height
+                final double textHeight = label.getHeight();
+                final double frameHeight = getHeight();
                 final double availableSpace = frameHeight - getCornerSize() * 2;
 
+                // determines if the text has enough space available to be displaced
+                // & checks that the text itself has a width (ie: there is text to show)
                 yield availableSpace >= textHeight && textHeight != 0;
             }
             default -> false;
@@ -513,7 +614,6 @@ public class BorderFrame extends Region {
     // ===================================
     //               CSS
     // ===================================
-
 
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
