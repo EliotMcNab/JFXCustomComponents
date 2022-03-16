@@ -410,8 +410,6 @@ public class MaterialColorPickerSkin extends SkinBase<MaterialColorPicker> imple
             case HSV -> showHsvFormat();
         }
 
-        // arranges the nodes making up the color format, taking into consideration any change in size
-        arrangeColorFormat();
         // updates the color code to match the current color
         synchroniseColorCodeToPointer();
 
@@ -431,6 +429,9 @@ public class MaterialColorPickerSkin extends SkinBase<MaterialColorPicker> imple
         // ...and makes hex code visible
         showHex();
 
+        // arranges the nodes making up the color format, taking into consideration any change in size
+        arrangeColorFormat();
+
     }
 
     /**
@@ -447,6 +448,9 @@ public class MaterialColorPickerSkin extends SkinBase<MaterialColorPicker> imple
         // ...and makes the rgb code visible
         showRgb();
 
+        // arranges the nodes making up the color format, taking into consideration any change in size
+        arrangeColorFormat();
+
     }
 
     /**
@@ -462,6 +466,9 @@ public class MaterialColorPickerSkin extends SkinBase<MaterialColorPicker> imple
         hideRgb();
         // ...and makes the hsv color code visible
         showHsv();
+
+        // arranges the nodes making up the color format, taking into consideration any change in size
+        arrangeColorFormat();
 
     }
 
@@ -1015,6 +1022,7 @@ public class MaterialColorPickerSkin extends SkinBase<MaterialColorPicker> imple
      * @return whether the content can be pasted as a complete hsv code
      */
     private boolean hsvPasteFormat(final String content) {
+
         // stops if content is not in valid hsv format
         if (!StringUtil.Validation.isValidHsv(content)) return false;
 

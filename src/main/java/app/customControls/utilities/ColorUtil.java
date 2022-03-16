@@ -1,5 +1,6 @@
 package app.customControls.utilities;
 
+import java.util.Arrays;
 import java.util.Locale;
 
 /**
@@ -111,7 +112,7 @@ public class ColorUtil {
         public static double[] fromHsvString(final String hsv) {
 
             // checks the validity of the hsv string
-            if (StringUtil.Validation.isValidHsv(hsv)) return new double[]{0, 100, 100};
+            if (!StringUtil.Validation.isValidHsv(hsv)) return new double[]{0, 100, 100};
 
             final String[] parsed = hsv.replace("hsv", "")
                                        .replace("(", "")
@@ -213,7 +214,7 @@ public class ColorUtil {
         public static int[] fromRgbString(final String rgb) {
 
             // checks the validity of the rgb string
-            if (StringUtil.Validation.isValidHsv(rgb)) return new int[]{255, 0, 0};
+            if (!StringUtil.Validation.isValidHsv(rgb)) return new int[]{255, 0, 0};
 
             final String[] parsed = rgb.replace("rgb", "")
                                        .replace("(", "")
