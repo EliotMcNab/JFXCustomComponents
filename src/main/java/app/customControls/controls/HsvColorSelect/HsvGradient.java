@@ -28,10 +28,11 @@ public class HsvGradient {
     // ===================================
 
     /*           DEFAULT VALUES         */
-    private static final int DEFAULT_HUE        = 0;
+
+    private static final int DEFAULT_HUE = 0;
     private static final int DEFAULT_SATURATION = 100;
-    private static final int DEFAULT_VALUE      = 100;
-    private static final int SEXTANT_SIZE       = 60;
+    private static final int DEFAULT_VALUE = 100;
+    private static final int SEXTANT_SIZE = 60;
 
     /*          GRADIENT VALUES         */
     // private final int[][] sextants              = new int[6][];
@@ -48,7 +49,7 @@ public class HsvGradient {
 
     /*             LISTENERS            */
     private        final ChangeListener<Number> resetOnResize;
-    private        final InvalidationListener generateOnCHange;
+    private        final InvalidationListener generateOnChange;
 
     // ===================================
     //            CONSTRUCTOR
@@ -60,22 +61,22 @@ public class HsvGradient {
 
     public HsvGradient(final int width, final int height, final int hue, final int saturation, final int value) {
 
-        this.hue                    = new SimpleIntegerProperty(hue);
-        this.saturation             = new SimpleIntegerProperty(saturation);
-        this.value                  = new SimpleIntegerProperty(value);
+        this.hue = new SimpleIntegerProperty(hue);
+        this.saturation = new SimpleIntegerProperty(saturation);
+        this.value = new SimpleIntegerProperty(value);
 
         setHue(hue);
         setSaturation(saturation);
         setValue(value);
 
-        this.width                  = new SimpleIntegerProperty(width);
-        this.height                 = new SimpleIntegerProperty(height);
+        this.width = new SimpleIntegerProperty(width);
+        this.height = new SimpleIntegerProperty(height);
 
         setWidth(width);
         setHeight(height);
 
-        this.resetOnResize          = (observableValue, oldValue, newValue) -> reset();
-        this.generateOnCHange       = observable                            -> generateGradient();
+        this.resetOnResize = (observableValue, oldValue, newValue) -> reset();
+        this.generateOnChange = observable -> generateGradient();
 
         registerListeners();
 
@@ -94,9 +95,9 @@ public class HsvGradient {
         heightProperty()    .addListener(resetOnResize);
 
         // value changes
-        hueProperty()       .addListener(generateOnCHange);
-        saturationProperty().addListener(generateOnCHange);
-        valueProperty()     .addListener(generateOnCHange);
+        hueProperty()       .addListener(generateOnChange);
+        saturationProperty().addListener(generateOnChange);
+        valueProperty()     .addListener(generateOnChange);
     }
 
     private void reset() {
@@ -133,9 +134,6 @@ public class HsvGradient {
         final int currentX       = (startingPosition + currentPosition) % (360 * getWidth());
         final int localX         = currentX % getWidth();
         final int currentSextant = (startingSextant + (currentX / getWidth())) % 6;
-
-        // System.out.printf("x:%s, sextant:%s\n", localX, currentSextant);
-        // System.out.println(Arrays.toString(generatedValues[currentSextant]));
 
         // checks if the column corresponding to the specified hue has already been generated
         return generatedValues[currentSextant][localX] == getValue();
@@ -218,11 +216,9 @@ public class HsvGradient {
 
         // if all values are contained in one sextant, returns that sextant
         if (startSextant == endSextant) {
-
             final Integer[] currentArray = sextants[startSextant];
-            final int[] intArray         = Arrays.stream(currentArray).mapToInt(i -> i).toArray();
 
-            return intArray;
+            return Arrays.stream(currentArray).mapToInt(i -> i).toArray();
         }
 
         // hue coordinates of the change in sextants
@@ -269,11 +265,8 @@ public class HsvGradient {
 
         }
 
-        // converts the array to int[] format
-        final int[] intArray = Arrays.stream(slice).mapToInt(i -> i).toArray();
-
         // returns the combined array
-        return intArray;
+        return Arrays.stream(slice).mapToInt(i -> i).toArray();
     }
 
     // pixel values

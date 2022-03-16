@@ -6,12 +6,9 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
-import javafx.scene.effect.BlurType;
-import javafx.scene.effect.InnerShadow;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
-import javafx.scene.paint.Color;
 
 /**
  * Handles display logic for the {@link LoopSlider} class
@@ -24,12 +21,15 @@ public class LoopSliderSkin extends SkinBase<LoopSlider> implements Skin<LoopSli
 
     // size constants
     //preferred
-    private static final double PREF_TRACK_WIDTH    = 200;
-    private static final double PREF_TRACK_HEIGHT   = 10;
-    private static final double PREF_THUMB_HEIGHT   = 20;
+
+    private static final double PREF_TRACK_WIDTH = 200;
+    private static final double PREF_TRACK_HEIGHT = 10;
+    private static final double PREF_THUMB_HEIGHT = 20;
+
     // bounds
-    private static final double MIN_TRACK_WIDTH     = 100;
-    private static final double MIN_TRACK_HEIGHT    = 10;
+
+    private static final double MIN_TRACK_WIDTH = 100;
+    private static final double MIN_TRACK_HEIGHT = 10;
 
     // components
     private Region track;
@@ -37,6 +37,7 @@ public class LoopSliderSkin extends SkinBase<LoopSlider> implements Skin<LoopSli
     private Pane pane;
 
     // listeners
+
     private final InvalidationListener sizeListener;
     private final InvalidationListener valueUpdateListener;
     private final EventHandler<MouseEvent> focusListener;
@@ -57,13 +58,14 @@ public class LoopSliderSkin extends SkinBase<LoopSlider> implements Skin<LoopSli
     protected LoopSliderSkin(LoopSlider loopSlider) {
         super(loopSlider);
 
-        this.loopSlider             = loopSlider;
-
-        this.sizeListener           = observable -> repositionComponents();
-        this.valueUpdateListener    = observable -> repositionThumb();
-        this.focusListener          = this::focusOnClick;
-        this.dragListener           = this::calculateThumbPosition;
-        this.valueClickListener     = this::updateThumbOnTrackClick;
+        // saves the associated LoopSlider
+        this.loopSlider = loopSlider;
+        // initialises listeners
+        this.sizeListener = observable -> repositionComponents();
+        this.valueUpdateListener = observable -> repositionThumb();
+        this.focusListener = this::focusOnClick;
+        this.dragListener = this::calculateThumbPosition;
+        this.valueClickListener = this::updateThumbOnTrackClick;
 
         initialiseGraphics();
         registerListeners();
@@ -189,8 +191,7 @@ public class LoopSliderSkin extends SkinBase<LoopSlider> implements Skin<LoopSli
      */
     private double bound(double x) {
         if (x < 0) return 0;
-        if (x >= adjustedWidth()) return adjustedWidth();
-        return x;
+        return Math.min(x, adjustedWidth());
     }
 
     /**
@@ -243,7 +244,9 @@ public class LoopSliderSkin extends SkinBase<LoopSlider> implements Skin<LoopSli
         track.setPrefWidth(width);
     }
 
-    // handles resizing and repositioning the thumb
+    /**
+     * Handles resizing and repositioning the thumb
+     */
     private void repositionThumb() {
         // centers the thumb vertically
         final double thumbX = loopSlider.getValue() / loopSlider.getMax() * adjustedWidth();

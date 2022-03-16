@@ -26,7 +26,7 @@ import javafx.scene.paint.Color;
  *     <li>allows to select a color inside of the Hsv spectrum</li>
  *     <li>can retrieve current spectrum color (top-left of the current spectrum)</li>
  *     <li>can retrieve current pointer color (currently selected color)</li>
- *     /!\ <i>hsv spectrum color</i> is not the same as <i>current color</i>, which corresponds to the current color
+ *     /!\ <i>hsv spectrum color</i> is not the same as <i>pointer color</i>, which corresponds to the current color
  * </ul>
  * @implNote requires an external control, such as a {@link javafx.scene.control.Slider Slider} or
  * {@link app.customControls.controls.loopSlider.LoopSlider LoopSlider} to be able to select the slice of the hsv
