@@ -1,9 +1,13 @@
 package app.customControls;
 
 import app.customControls.controls.colorPicker.MaterialColorPicker;
+import app.customControls.controls.movementPane.MovementPane;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -67,9 +71,15 @@ public class HelloApplication extends Application {
 */
 
         // color picker test
-        BorderPane root = new BorderPane();
+        /*BorderPane root = new BorderPane();
         MaterialColorPicker colorPicker = new MaterialColorPicker();
-        root.setCenter(colorPicker);
+        root.setCenter(colorPicker);*/
+
+        // movement pane test
+        final BorderPane root = new BorderPane();
+        final MovementPane movementPane = new MovementPane();
+        Platform.runLater(() -> movementPane.setAssociatedNode(new Rectangle(200, 200, Color.GRAY)));
+        root.setCenter(movementPane);
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/app/customControls/style/app-style.css").toExternalForm());
@@ -79,7 +89,8 @@ public class HelloApplication extends Application {
         // test.displayInConsole(slice);
 
         stage.setTitle("Color Picker");
-        stage.setResizable(false);
+        stage.setMinWidth(500);
+        stage.setMinHeight(300);
         stage.setScene(scene);
         stage.show();
     }

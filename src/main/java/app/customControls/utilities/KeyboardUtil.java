@@ -4,6 +4,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * Collection of helper methods to make handling {@link KeyEvent Keyevents} easier and more readable
@@ -42,7 +43,8 @@ public class KeyboardUtil {
         B,
         N,
         ENTER,
-        ESC
+        ESC,
+        SPACE
     }
 
     private static final HashMap<Letters, KeyCode> keyCodeCorrespondence = new HashMap<>();
@@ -75,6 +77,7 @@ public class KeyboardUtil {
         keyCodeCorrespondence.put(Letters.Z, KeyCode.Z);
         keyCodeCorrespondence.put(Letters.ENTER, KeyCode.ENTER);
         keyCodeCorrespondence.put(Letters.ESC, KeyCode.ESCAPE);
+        keyCodeCorrespondence.put(Letters.SPACE, KeyCode.SPACE);
     }
 
     public enum Modifier implements Key {
@@ -86,6 +89,14 @@ public class KeyboardUtil {
         for (Key key : keys) {
             if (key instanceof Letters && !checkKey(keyEvent, (Letters) key)) return false;
             else if (key instanceof Modifier && !checkModifier(keyEvent, (Modifier) key)) return false;
+        }
+        return true;
+    }
+
+    public static boolean areKeysDown(final HashSet<KeyCode> keyPresses, final Key... keys) {
+        for (Key key : keys) {
+            if (key instanceof Letters && !keyPresses.contains(keyCodeCorrespondence.get(key))) return false;
+            else if (key instanceof Modifier) return false;
         }
         return true;
     }
