@@ -27,7 +27,7 @@ import java.util.Arrays;
 
 import static app.customControls.controls.colorPicker.ColorFormat.*;
 import static app.customControls.controls.colorPicker.ColorFormat.HEX;
-import static app.customControls.utilities.KeyboardUtil.Letters.*;
+import static app.customControls.utilities.KeyboardUtil.Letter.*;
 import static app.customControls.utilities.KeyboardUtil.Modifier.CTRL;
 import static app.customControls.utilities.KeyboardUtil.Modifier.SHIFT;
 import static app.customControls.utilities.KeyboardUtil.areKeysDown;

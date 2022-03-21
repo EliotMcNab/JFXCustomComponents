@@ -18,7 +18,8 @@ public class MovementPane extends Control {
 
     private static final double DEFAULT_VAL = 0;
     private static final double DEFAULT_MIN_VAL = 0;
-    private static final double DEFAULT_MAX_VAL = 10;
+    private static final double DEFAULT_MAX_VAL = 1000;
+    private static final double DEFAULT_VISIBLE = 500;
     private static final Node DEFAULT_NODE = null;
 
     // properties
@@ -27,8 +28,10 @@ public class MovementPane extends Control {
     private final DoubleProperty vValue;
     private final DoubleProperty minHVal;
     private final DoubleProperty maxHVal;
+    private final DoubleProperty hVisible;
     private final DoubleProperty minVVal;
     private final DoubleProperty maxVVal;
+    private final DoubleProperty vVisible;
     private final ObjectProperty<Node> movementNode;
 
     // =======================================
@@ -43,6 +46,8 @@ public class MovementPane extends Control {
         this.minVVal = new SimpleDoubleProperty(this, "minVVal", DEFAULT_MIN_VAL);
         this.maxHVal = new SimpleDoubleProperty(this, "maxHVal", DEFAULT_MAX_VAL);
         this.maxVVal = new SimpleDoubleProperty(this, "minVVal", DEFAULT_MAX_VAL);
+        this.hVisible = new SimpleDoubleProperty(this, "visibleH", DEFAULT_VISIBLE);
+        this.vVisible = new SimpleDoubleProperty(this, "visibleV", DEFAULT_VISIBLE);
         this.movementNode = new SimpleObjectProperty<>(this, "movementNode", DEFAULT_NODE);
 
     }
@@ -105,6 +110,14 @@ public class MovementPane extends Control {
         return maxVVal;
     }
 
+    public DoubleProperty horizontalVisibleProperty() {
+        return hVisible;
+    }
+
+    public DoubleProperty verticalVisibleProperty() {
+        return vVisible;
+    }
+
     // =======================================
     //                GETTERS
     // =======================================
@@ -131,6 +144,14 @@ public class MovementPane extends Control {
 
     public double getVerticalMax() {
         return maxVVal.get();
+    }
+
+    public double getHorizontalVisibleAmount() {
+        return hVisible.get();
+    }
+
+    public double getVerticalVisibleAmount() {
+        return vVisible.get();
     }
 
     // =======================================
@@ -166,6 +187,16 @@ public class MovementPane extends Control {
         if (!validateVMax(newMax)) return;
     }
 
+    public void setHorizontalVisibleAmount(final double newVisibleAmount) {
+        if (!validateHVisible(newVisibleAmount)) return;
+        hVisible.set(newVisibleAmount);
+    }
+
+    public void setVerticalVisibleAmount(final double newVisibleAmount) {
+        if (!validateVVisible(newVisibleAmount)) return;
+        vVisible.set(newVisibleAmount);
+    }
+
     // =======================================
     //              VALIDATION
     // =======================================
@@ -192,6 +223,14 @@ public class MovementPane extends Control {
 
     private boolean validateVMax(final double newMax) {
         return newMax > getVerticalMin();
+    }
+
+    private boolean validateHVisible(final double newVisibleAmount) {
+        return newVisibleAmount > getHorizontalMin() && newVisibleAmount < getHorizontalMax();
+    }
+
+    private boolean validateVVisible(final double newVisibleAmount) {
+        return newVisibleAmount > getVerticalMin() && newVisibleAmount < getHorizontalMax();
     }
 
 }

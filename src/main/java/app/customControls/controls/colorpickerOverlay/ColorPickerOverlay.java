@@ -20,7 +20,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import static app.customControls.utilities.KeyboardUtil.Letters.ESC;
+import static app.customControls.utilities.KeyboardUtil.Letter.ESC;
 import static app.customControls.utilities.KeyboardUtil.areKeysDown;
 
 /**
