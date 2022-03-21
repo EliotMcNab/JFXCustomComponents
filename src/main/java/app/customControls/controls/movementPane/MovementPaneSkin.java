@@ -459,7 +459,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         final Translate translate = new Translate();
         translate.setX(pathTo.getX());
         translate.setY(pathTo.getY());
-        System.out.println(associatedNode.getTransforms().size());
 
         // adds the displacement to those previously applied to the node
         nodeMovement = (Translate) nodeMovement.createConcatenation(translate);
@@ -475,8 +474,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private void moveToAnimated(final Point2D target) {
         // gets the associated node
         final Node associatedNode = movementPane.getAssociatedNode();
-
-        System.out.printf("translateX:%s, translateY:%s\n", associatedNode.getTranslateX(), associatedNode.getTranslateY());
 
         // determines the path to the specified target
         final Point2D pathTo = target.subtract(getNodePosition());
