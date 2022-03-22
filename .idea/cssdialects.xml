@@ -4,5 +4,6 @@
     <file url="file://$PROJECT_DIR$/src/main/resources/app/customControls/style/app-style.css" dialect="JavaFX" />
     <file url="file://$PROJECT_DIR$/src/main/resources/app/customControls/style/color-picker-reference.css" dialect="JavaFX" />
     <file url="file://$PROJECT_DIR$/src/main/resources/app/customControls/style/color-picker.css" dialect="JavaFX" />
+    <file url="file://$PROJECT_DIR$/src/main/resources/app/customControls/style/movement-pane.css" dialect="JavaFX" />
   </component>
 </project>

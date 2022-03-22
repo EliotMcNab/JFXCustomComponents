@@ -1,3 +1,31 @@
-.movement-pane {
+* {
+    emphsis-blue-color: #008CFF;
+    background-gray-color: #1E2022;
+    dark-gray-color: #141517;
+}
 
+.background {
+    -fx-background-color: background-gray-color;
+}
+
+.scroll-bar,
+.scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb,
+.scroll-bar:vertical .thumb{
+    -fx-background-radius: 10;
+    -fx-background-color: emphsis-blue-color;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-shape: " ";
+    -fx-padding: 2;
 }
