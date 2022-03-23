@@ -1,4 +1,4 @@
-package app.customControls.controls.corner;
+package app.customControls.controls.shapes;
 
 /**
  * Represents the orientation of a {@link javafx.scene.Node}<br>
@@ -24,5 +24,6 @@ public enum Orientation {
     BOTTOM_RIGHT,
     BOTTOM,
     BOTTOM_LEFT,
-    LEFT
+    LEFT,
+    NULL
 }

@@ -2,6 +2,7 @@ package app.customControls.controls.colorpickerOverlay;
 
 import app.customControls.controls.colorPicker.MaterialColorPicker;
 import app.customControls.controls.corner.BorderFrame;
+import app.customControls.controls.shapes.BorderLine;
 import app.customControls.handlers.delay.DelayHandler;
 import app.customControls.utilities.NodeUtil;
 import app.customControls.utilities.ScreenUtil;
@@ -34,7 +35,7 @@ import static app.customControls.utilities.KeyboardUtil.areKeysDown;
  * <ul>
  *     <li>border-frame: {@link BorderFrame}</li>
  *     <ul>
- *         <li>border-line: {@link app.customControls.controls.corner.BorderLine BorderLine}</li>
+ *         <li>border-line: {@link BorderLine BorderLine}</li>
  *     </ul>
  *     <li>hover-Color: Rectangle</li>
  * </ul>

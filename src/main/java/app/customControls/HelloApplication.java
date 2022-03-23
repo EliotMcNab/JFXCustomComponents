@@ -1,13 +1,23 @@
 package app.customControls;
 
 import app.customControls.controls.colorPicker.MaterialColorPicker;
+import app.customControls.controls.corner.BorderFrame;
 import app.customControls.controls.movementPane.MovementPane;
+import app.customControls.controls.shapes.Arrow;
+import app.customControls.controls.shapes.Orientation;
+import app.customControls.controls.shapes.Triangle;
+import javafx.animation.Animation;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.Scene;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -76,10 +86,27 @@ public class HelloApplication extends Application {
         root.setCenter(colorPicker);*/
 
         // movement pane test
-        final BorderPane root = new BorderPane();
+        /*final BorderPane root = new BorderPane();
         final MovementPane movementPane = new MovementPane();
         Platform.runLater(() -> movementPane.setAssociatedNode(new Rectangle(200, 200, Color.GRAY)));
-        root.setCenter(movementPane);
+        root.setCenter(movementPane);*/
+
+        // triangle test
+        /*final BorderPane root = new BorderPane();
+        final Triangle triangle = new Triangle();
+        root.setCenter(triangle);*/
+
+        // arrow test
+        final AnchorPane root = new AnchorPane();
+        final Arrow arrow1 = new Arrow(25, 10);
+        final Arrow arrow2 = new Arrow(25, 10);
+        arrow1.setColor(Color.RED);
+        arrow2.setRotation(30);
+        arrow2.setColor(Color.BLUE);
+        root.getChildren().addAll(
+                arrow1,
+                arrow2
+        );
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/app/customControls/style/app-style.css").toExternalForm());

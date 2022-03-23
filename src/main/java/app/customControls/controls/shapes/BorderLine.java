@@ -1,4 +1,4 @@
-package app.customControls.controls.corner;
+package app.customControls.controls.shapes;
 
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
@@ -108,7 +108,7 @@ public class BorderLine extends Region {
     private final ChangeListener<Number> thicknessListener;
     private final ChangeListener<Number> arcWidthListener;
     private final ChangeListener<Number> archHeightListener;
-    private final ChangeListener<Color>  colorListener;
+    private final ChangeListener<Color> colorListener;
 
     // ===================================
     //           CONSTRUCTOR

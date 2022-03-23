@@ -22,3 +22,13 @@
 .popup .popup-text {
     -fx-text-fill: white;
 }
+
+.border-frame {
+    -fx-text-location: center;
+}
+
+.arrow {
+    -fx-arrow-type: single;
+    -fx-pref-width: 100;
+    -fx-pref-height: 25;
+}

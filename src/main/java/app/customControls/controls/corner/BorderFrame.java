@@ -1,5 +1,7 @@
 package app.customControls.controls.corner;
 
+import app.customControls.controls.shapes.BorderLine;
+import app.customControls.controls.shapes.Orientation;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
@@ -46,6 +48,7 @@ public class BorderFrame extends Region {
     public static final String DEFAULT_TEXT = "";
     public static final Font DEFAULT_FONT = Font.getDefault();
     public static final String DEFAULT_TEXT_LOCATION = "top";
+    public static final Color DEFAULT_COLOR = Color.BLACK;
 
     /*     CSS STYLEABLE PROPERTIES     */
     private static final StyleablePropertyFactory<BorderFrame> FACTORY = new StyleablePropertyFactory<>(
@@ -88,7 +91,7 @@ public class BorderFrame extends Region {
      * @param cornerThickness (double): line thickness for corners, cannot be greater than cornerSize
      */
     public BorderFrame(final double cornerSize, final double cornerThickness) {
-        this(cornerSize, cornerThickness, null);
+        this(cornerSize, cornerThickness, DEFAULT_COLOR);
     }
 
     /**
