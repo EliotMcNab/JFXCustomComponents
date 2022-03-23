@@ -3,7 +3,6 @@ package app.customControls.controls.movementPane;
 import app.customControls.controls.time.TimedAnimation;
 import app.customControls.utilities.EffectsUtil;
 import app.customControls.utilities.KeyboardUtil;
-import app.customControls.utilities.NodeUtil;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -29,9 +28,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.transform.Scale;
-import javafx.scene.transform.Transform;
-import javafx.scene.transform.Translate;
+import javafx.scene.transform.*;
 import javafx.util.Duration;
 
 import java.util.HashSet;
@@ -54,10 +51,11 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private static final double GROWTH = 1.01;
     private static final double MOVEMENT_RATIO = 0.01; // ratio of max scroll bar max value used when adding to the scroll bar
     private static final long ZOOM_DURATION = 100;
-    private static final long RESET_DURATION = 500;
+    private static final long RESET_DURATION = 300;
     private static final double ZOOM_AMOUNT = 1.05;
     private static final double MAX_ZOOM = 5.0;
     private static final double MIN_ZOOM = 0.3;
+    private static final String CSS_LOCATION = "/app/customControls/style/movement-pane.css";
 
     // effects
 
@@ -221,7 +219,14 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private void style() {
         container.getStyleClass().add("background");
         movementPane.getStyleClass().add("movement-pane");
-        movementPane.getStylesheets().add(MovementPane.class.getResource("/app/customControls/style/movement-pane.css").toExternalForm());
+
+        try {
+            String css = MovementPane.class.getResource(CSS_LOCATION).toExternalForm();
+            movementPane.getStylesheets().add(css);
+        } catch (NullPointerException e) {
+            System.out.printf("Impossible to add stylesheet at location %s\n", CSS_LOCATION);
+        }
+
     }
 
     private void populate() {
@@ -446,12 +451,17 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     }
 
     private void reset() {
-        // centers the scroll bars
-        hScroll.setValue(hScroll.getMax() / 2);
-        vScroll.setValue(vScroll.getMax() / 2);
+        // drops the node in case the user is holding it
+        dropNode();
 
-        final ParallelTransition test = new ParallelTransition(animateShrink(), animateCentering());
-        test.play();
+        // generates the animations necessary to reset the node
+        final Animation shrink = animateShrink(RESET_DURATION);             // resets the node's scale
+        final Animation nodeCentering = animateNodeCentering(RESET_DURATION);      // centers the node
+        final Animation scrollbarCentering = animateScrollBarCentering(RESET_DURATION); // centers the scrollbars
+
+        // combines all animations and plays them to reset node
+        final ParallelTransition reset = new ParallelTransition(shrink, nodeCentering, scrollbarCentering);
+        reset.play();
     }
 
     private void center(final boolean animated) {
@@ -460,57 +470,21 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         vScroll.setValue(vScroll.getMax() / 2);
 
         // moves the node to the center
-        if (animated) moveToAnimated(getNodeCenterInViewPort());
+        if (animated) animateNodeCentering(RESET_DURATION).play();
         else moveTo(getNodeCenterInViewPort());
     }
 
     private void moveTo(final Point2D target) {
 
-        // TODO: update commenting
-
         // determines the path to the target
         final Point2D pathTo = target.subtract(getNodePosition());
 
-        /*final Translate drag = new Translate();
-        drag.setX(pathTo.getX());
-        drag.setY(pathTo.getY());
-
-        NodeUtil.optimiseTransformations(associatedNode, drag);*/
-
+        // updates the nodes translation
         drag.setX(drag.getX() + pathTo.getX());
         drag.setY(drag.getY() + pathTo.getY());
 
         // saves the node's progress
         updateProgress();
-    }
-
-    private void moveToAnimated(final Point2D target) {
-        // gets the associated node
-        final Node associatedNode = movementPane.getAssociatedNode();
-
-        // determines the path to the specified target
-        final Point2D pathTo = target.subtract(getNodePosition());
-
-        // applies the translation
-        final TranslateTransition animatedTranslation = new TranslateTransition();
-        animatedTranslation.setNode(associatedNode);
-        animatedTranslation.setDuration(Duration.millis(RESET_DURATION));
-        animatedTranslation.setFromX(associatedNode.getTranslateX());
-        animatedTranslation.setFromY(associatedNode.getTranslateY());
-        animatedTranslation.setByX(pathTo.getX());
-        animatedTranslation.setByY(pathTo.getY());
-        animatedTranslation.play();
-
-        // saves the node's progress once the animation has finished
-        // & resets its translation
-        animatedTranslation.setOnFinished(actionEvent -> {
-            updateProgress();
-            final Point2D nodePosition = getNodePosition();
-            associatedNode.setTranslateX(0);
-            associatedNode.setTranslateY(0);
-            moveTo(nodePosition);
-        });
-
     }
 
     private Point2D boundNodeMovement(final Point2D target) {
@@ -527,7 +501,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // determines the node's final position
         final Point2D finalPosition = nodePosition.add(target);
 
-        // determines of the node will overlap
+        // determines if the node will overlap viewport once it has moved
         final boolean overlapLeft = finalPosition.getX() < 0;
         final boolean overlapRight = finalPosition.getX() > availableWidth - nodeWidth;
         final boolean overlapTop = finalPosition.getY() < 0;
@@ -536,7 +510,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         final double deltaX;
         final double deltaY;
 
-        // handles overlap in final node position
+        // determines by how much to move the node to avoid overlap if there is any
              if (overlapLeft)   deltaX = -nodePosition.getX();
         else if (overlapRight)  deltaX = availableWidth - nodePosition.getX() - nodeWidth;
         else                    deltaX = target.getX();
@@ -649,30 +623,35 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     //               ANIMATION
     // =======================================
 
-    private Animation animateShrink() {
-        System.out.println("====================");
-        System.out.printf("pivotX         :%s\n", zoom.getPivotX());
-        System.out.printf("pivotY         :%s\n", zoom.getPivotY());
-        System.out.printf("node width     :%s\n", getNodeWidth());
-        System.out.printf("node height    :%s\n", getNodeHeight());
+    private Animation animateShrink(final long duration) {
+        // pivot must be node center (unscaled) + dopShadow radius
+        // this produces a slight teleportation effect when pivot is changed, but it is hard to pickup in motion
 
-        // TODO: pivot must be node center (unscaled) + dopShadow radius
+        // determines the node's current shadow
+        // (this should normally always be the idle shadow since node is dropped before reset,
+        // but still useful if this method is called outside of rest method)
         final DropShadow currentShadow = pickup ? NODE_PICKUP_SHADOW : NODE_IDLE_SHADOW;
 
+        // determines the necessary pivot for centering the node
         final double pivotX = (getUnscaledNodeWidth() - currentShadow.getRadius() * 2) / 2 + currentShadow.getOffsetX();
         final double pivotY = (getUnscaledNodeHeight() - currentShadow.getRadius() * 2) / 2 + currentShadow.getOffsetY();
-        final double deltaPivotX = pivotX - zoom.getPivotX();
-        final double deltaPivotY = pivotY - zoom.getPivotY();
 
+        // updates the node's pivot (slight teleportation visible here)
         zoom.setPivotX(pivotX);
         zoom.setPivotY(pivotY);
 
-        System.out.println((getUnscaledNodeWidth() - currentShadow.getRadius() * 2) / 2 + currentShadow.getOffsetX());
-        System.out.println((getUnscaledNodeHeight() - currentShadow.getRadius() * 2) / 2 + currentShadow.getOffsetY());
-
+        // animates the node shrinking from its current scale to its default scale
         final Timeline shrink = new Timeline(
-                /*new KeyFrame(
+                new KeyFrame(
                         Duration.ZERO,
+                        new KeyValue(
+                                zoom.pivotXProperty(),
+                                zoom.getPivotX()
+                        ),
+                        new KeyValue(
+                                zoom.pivotYProperty(),
+                                zoom.getPivotY()
+                        ),
                         new KeyValue(
                                 zoom.xProperty(),
                                 zoom.getX()
@@ -683,7 +662,15 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                         )
                 ),
                 new KeyFrame(
-                        Duration.millis(RESET_DURATION),
+                        Duration.millis(duration),
+                        new KeyValue(
+                                zoom.pivotXProperty(),
+                                pivotX
+                        ),
+                        new KeyValue(
+                                zoom.pivotYProperty(),
+                                pivotY
+                        ),
                         new KeyValue(
                                 zoom.xProperty(),
                                 1
@@ -692,22 +679,20 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                                 zoom.yProperty(),
                                 1
                         )
-                )*/
+                )
         );
+        // resets the scale once the node has finished shrinking
         shrink.setOnFinished(actionEvent -> scale = 1);
         return shrink;
     }
 
-    private Animation animateCentering() {
+    private Animation animateNodeCentering(final long duration) {
+        // determines the path to the node's central position
         final Point2D pathTo = getNodeCenterInViewPort().subtract(getNodePosition());
-        System.out.printf("scale          :%s\n", scale);
-        System.out.printf("position       :%s\n", getNodePosition());
-        System.out.printf("center         :%s\n", getNodeCenterInViewPort());
-        System.out.printf("pathTo         :%s\n", pathTo);
-        System.out.printf("scaled pathTo  :%s\n", pathTo.multiply(scale));
-        System.out.printf("unscaled center:%s\n", getUnscaledNodeCenterInViewPort());
+
+        // animates the node being centered
         final Timeline center = new Timeline(
-                /*new KeyFrame(
+                new KeyFrame(
                         Duration.ZERO,
                         new KeyValue(
                                 drag.xProperty(),
@@ -719,7 +704,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                         )
                 ),
                 new KeyFrame(
-                        Duration.millis(RESET_DURATION),
+                        Duration.millis(duration),
                         new KeyValue(
                                 drag.xProperty(),
                                 drag.getX() + pathTo.getX()
@@ -728,13 +713,39 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                                 drag.yProperty(),
                                 drag.getY() + pathTo.getY()
                         )
-                )*/
+                )
         );
-        center.setOnFinished(actionEvent -> {
-            updateProgress();
-            System.out.printf("position       :%s\n", getNodePosition());
-        });
+        // updates the node's progress once the animation is over
+        center.setOnFinished(actionEvent -> updateProgress());
         return center;
+    }
+
+    private Animation animateScrollBarCentering(final long duration) {
+        // animates the scrollbars being centered
+        return new Timeline(
+                new KeyFrame(
+                        Duration.ZERO,
+                        new KeyValue(
+                                hScroll.valueProperty(),
+                                hScroll.getValue()
+                        ),
+                        new KeyValue(
+                                vScroll.valueProperty(),
+                                vScroll.getValue()
+                        )
+                ),
+                new KeyFrame(
+                        Duration.millis(duration),
+                        new KeyValue(
+                                hScroll.valueProperty(),
+                                hScroll.getMax() / 2
+                        ),
+                        new KeyValue(
+                                vScroll.valueProperty(),
+                                vScroll.getMax() / 2
+                        )
+                )
+        );
     }
 
     // =======================================
