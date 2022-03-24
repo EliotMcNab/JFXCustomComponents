@@ -193,6 +193,9 @@ public class Arrow extends Region {
     // =====================================
 
     private void style() {
+        arrow1.getStyleClass().add("inner-arrow");
+        arrow2.getStyleClass().add("outer-arrow");
+        line.getStyleClass().add("line");
         getStyleClass().add("arrow");
     }
 
@@ -354,5 +357,4 @@ public class Arrow extends Region {
         resize();
         reposition();
     }
-
 }

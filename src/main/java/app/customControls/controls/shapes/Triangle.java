@@ -92,6 +92,7 @@ public class Triangle extends Polygon {
 
         // initialisation
 
+        style();
         registerListeners();
         updatePolygon();
     }
@@ -99,6 +100,10 @@ public class Triangle extends Polygon {
     // =====================================
     //            INITIALISATION
     // =====================================
+
+    private void style() {
+        getStyleClass().add("triangle");
+    }
 
     private void registerListeners() {
         pointsProperty().addListener(pointListener);
