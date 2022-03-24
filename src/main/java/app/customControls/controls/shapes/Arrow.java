@@ -12,6 +12,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
 
+import java.awt.geom.Point2D;
 import java.util.List;
 
 public class Arrow extends Region {
@@ -249,7 +250,7 @@ public class Arrow extends Region {
     //             POSITIONING
     // =====================================
 
-    private void resize() {
+    private void resize() {;
         final double width = getWidth();
         final double height = getHeight();
 
@@ -261,6 +262,9 @@ public class Arrow extends Region {
 
         line.setPrefWidth(width - arrowCount * (arrowWidth - 0.5));
         line.setPrefHeight(height / 2);
+
+        setLayoutX(0);
+        setLayoutY(-height / 2);
     }
 
     private void reposition() {
@@ -287,9 +291,13 @@ public class Arrow extends Region {
         rotate.setPivotY(height / 2);
     }
 
-    public void setRotation(final double rotation) {
-        if (Math.abs(rotation) % 45 != 0) setOrientation(Orientation.NULL);
-        rotate.setAngle(rotation);
+    public void moveTo(final Point2D target) {
+        moveTo(target.getX(), target.getY());
+    }
+
+    public void moveTo(final double x, final double y) {
+        setLayoutX(x);
+        setLayoutY(y - getHeight() / 2);
     }
 
     // =====================================
@@ -324,6 +332,32 @@ public class Arrow extends Region {
         return arrowType.getValue();
     }
 
+    public double getRotation() {
+        return rotate.getAngle();
+    }
+
+    public double getDisplayRotation() {
+        final double rotation = -getRotation();
+        final double adjustRotation = (rotation < 0 ? (rotation + 360 * (int) Math.abs(rotation) / 360 + 1) : rotation) % 360;
+        return Math.abs(adjustRotation);
+    }
+
+    public double getLocalRotation() {
+        final double displayRotation = getDisplayRotation();
+        if (displayRotation > 90 && displayRotation <= 180) return displayRotation - 90;
+        else if (displayRotation > 180 && displayRotation <= 270) return displayRotation - 180;
+        else if (displayRotation > 270 && displayRotation < 360) return displayRotation - 270;
+        else return displayRotation;
+    }
+
+    public double getDisplayWidth() {
+        return Math.cos(Math.toRadians(getLocalRotation())) * getWidth();
+    }
+
+    public double getDisplayHeight() {
+        return Math.sin(Math.toRadians(getLocalRotation())) * getWidth();
+    }
+
     // =====================================
     //               SETTERS
     // =====================================
@@ -356,5 +390,10 @@ public class Arrow extends Region {
 
         resize();
         reposition();
+    }
+
+    public void setRotation(final double rotation) {
+        if (Math.abs(rotation) % 45 != 0) setOrientation(Orientation.NULL);
+        rotate.setAngle(rotation);
     }
 }

@@ -101,8 +101,12 @@ public class HelloApplication extends Application {
         final Arrow arrow1 = new Arrow(25, 10);
         final Arrow arrow2 = new Arrow(25, 10);
         arrow1.setColor(Color.RED);
-        arrow2.setRotation(30);
+        arrow2.setOrientation(Orientation.TOP_LEFT);
         arrow2.setColor(Color.BLUE);
+        Platform.runLater(() -> {
+            arrow2.moveTo(arrow2.getDisplayWidth(), arrow2.getDisplayHeight());
+            arrow1.moveTo(arrow2.getDisplayWidth(), arrow2.getDisplayHeight());
+        });
         root.getChildren().addAll(
                 arrow1,
                 arrow2
