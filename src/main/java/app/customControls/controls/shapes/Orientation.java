@@ -25,5 +25,8 @@ public enum Orientation {
     BOTTOM,
     BOTTOM_LEFT,
     LEFT,
+    HORIZONTAL,
+    VERTICAL,
+    DIAGONAL,
     NULL
 }

@@ -26,13 +26,3 @@
 .border-frame {
     -fx-text-location: center;
 }
-
-.arrow {
-    -fx-arrow-type: single;
-    -fx-pref-width: 100;
-    -fx-pref-height: 25;
-}
-
-.arrow:top-left {
-    -fx-background-color: gray;
-}

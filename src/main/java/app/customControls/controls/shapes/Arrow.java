@@ -31,11 +31,11 @@ public class Arrow extends Region {
 
     // constants
 
-    private static final double DEFAULT_WIDTH = 40;
-    private static final double DEFAULT_HEIGHT = 20;
-    private static final Color DEFAULT_COLOR = Color.BLACK;
-    private static final ArrowType DEFAULT_ARROW_TYPE = ArrowType.SINGLE;
-    private static final Orientation DEFAULT_ORIENTATION = Orientation.RIGHT;
+    public static final double DEFAULT_WIDTH = 40;
+    public static final double DEFAULT_HEIGHT = 20;
+    public static final Color DEFAULT_COLOR = Color.BLACK;
+    public static final ArrowType DEFAULT_ARROW_TYPE = ArrowType.SINGLE;
+    public static final Orientation DEFAULT_ORIENTATION = Orientation.RIGHT;
 
     // styleable properties
 
@@ -85,6 +85,8 @@ public class Arrow extends Region {
     private final BooleanProperty verticalArrow;
     private static final PseudoClass DIAGONAL_PsC = PseudoClass.getPseudoClass("diagonal");
     private final BooleanProperty diagonalArrow;
+    private static final PseudoClass SELECTED_PsC = PseudoClass.getPseudoClass("selected");
+    private final BooleanProperty selectedArrow;
 
     // components
 
@@ -149,6 +151,7 @@ public class Arrow extends Region {
         this.horizontalArrow = CssUtil.pseudoClassProperty(HORIZONTAL_PsC, Arrow.this, "horizontal");
         this.verticalArrow = CssUtil.pseudoClassProperty(VERTICAL_PsC, Arrow.this, "vertical");
         this.diagonalArrow = CssUtil.pseudoClassProperty(DIAGONAL_PsC, Arrow.this, "diagonal");
+        this.selectedArrow = CssUtil.pseudoClassProperty(SELECTED_PsC, Arrow.this, "selected");
 
         // initialising listeners
 
@@ -316,6 +319,10 @@ public class Arrow extends Region {
         return (ObjectProperty<ArrowType>) arrowType;
     }
 
+    public BooleanProperty selectedProperty() {
+        return selectedArrow;
+    }
+
     // =====================================
     //               GETTERS
     // =====================================
@@ -348,6 +355,14 @@ public class Arrow extends Region {
         else if (displayRotation > 180 && displayRotation <= 270) return displayRotation - 180;
         else if (displayRotation > 270 && displayRotation < 360) return displayRotation - 270;
         else return displayRotation;
+    }
+
+    public double getLength() {
+        return getWidth();
+    }
+
+    public double getThickness() {
+        return getHeight();
     }
 
     public double getDisplayWidth() {
@@ -395,5 +410,9 @@ public class Arrow extends Region {
     public void setRotation(final double rotation) {
         if (Math.abs(rotation) % 45 != 0) setOrientation(Orientation.NULL);
         rotate.setAngle(rotation);
+    }
+
+    public void setSelected(final boolean isSelected) {
+        selectedArrow.set(isSelected);
     }
 }
