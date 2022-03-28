@@ -1,19 +1,14 @@
 package app.customControls;
 
 import app.customControls.controls.movementPane.MovementPane;
-import app.customControls.controls.sizePanel.ResizePanel;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
+import app.customControls.controls.resizePanel.ResizePanel;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 import java.io.IOException;
 
@@ -108,13 +103,24 @@ public class HelloApplication extends Application {
         );*/
 
         // size panel test
-        final AnchorPane root = new AnchorPane();
+        /*final AnchorPane root = new AnchorPane();
         final ResizePanel sizePanel = new ResizePanel();
         final Rectangle rectangle = new Rectangle(20, 20, Color.BLUE);
         sizePanel.setLayoutX(100);
         sizePanel.setLayoutY(100);
         Platform.runLater(() -> sizePanel.setAssociatedNode(rectangle));
-        root.getChildren().add(sizePanel);
+        root.getChildren().add(sizePanel);*/
+
+        final BorderPane root = new BorderPane();
+        final MovementPane movementPane = new MovementPane();
+        final ResizePanel sizePanel = new ResizePanel();
+        final Rectangle rectangle = new Rectangle(20, 20, Color.BLUE);
+        sizePanel.setAssociatedNode(rectangle);
+        Platform.runLater(() -> {
+            movementPane.setAssociatedNode(sizePanel);
+            // movementPane.setAssociatedNode(new Rectangle(200, 100, Color.GRAY));
+        });
+        root.setCenter(movementPane);
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/app/customControls/style/app-style.css").toExternalForm());

@@ -3,11 +3,6 @@
     -fx-background-color: gray;
 }
 
-.size-panel .resized-node {
-    -fx-border-color: red;
-    -fx-border-width: 2;
-}
-
 .arrow {
     -fx-pref-width: 15;
     -fx-pref-height: 7;
@@ -15,4 +10,9 @@
 
 .arrow:selected {
     -fx-fill: blue;
+}
+
+.size-panel:selected .resized-node {
+    -fx-border-width: 1;
+    -fx-border-style: segments(5);
 }

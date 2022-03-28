@@ -471,7 +471,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         // moves the node to the center
         if (animated) animateNodeCentering(RESET_DURATION).play();
-        else moveTo(getNodeCenterInViewPort());
+        else          moveTo(getNodeCenterInViewPort());
     }
 
     private void moveTo(final Point2D target) {
@@ -936,7 +936,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     //            ASSOCIATED NODE
     // =======================================
 
-    private void bindNode(final Node node) {
+    protected void bindNode(final Node node) {
         viewPort.getChildren().clear();
         viewPort.getChildren().add(node);
         node.boundsInParentProperty().addListener(collisionListener);

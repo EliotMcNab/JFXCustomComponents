@@ -1,4 +1,4 @@
-package app.customControls.controls.sizePanel;
+package app.customControls.controls.resizePanel;
 
 import app.customControls.controls.shapes.Arrow;
 import app.customControls.utilities.CssUtil;
@@ -11,6 +11,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Translate;
 
 import java.util.List;
 
@@ -27,6 +28,7 @@ public class ResizePanel extends Control {
 
     private static final Region DEFAULT_NODE = new Region();
     private static final double DEFAULT_ARROW_SPACE = 3;
+    private static final Translate DEFAULT_TRANSLATE = new Translate();
 
     static {
         DEFAULT_NODE.setPrefWidth(50);
@@ -47,6 +49,7 @@ public class ResizePanel extends Control {
     private final DoubleProperty arrowLength;
     private final DoubleProperty arrowThickness;
     private final ObjectProperty<Color> arrowColor;
+    private final ObjectProperty<Translate> translate;
 
     // pseudo classes
 
@@ -90,7 +93,16 @@ public class ResizePanel extends Control {
      * @param arrowColor ({@link Color}): the color of arrows in the resize panel
      */
     public ResizePanel(final Node associatedNode, final double arrowLength, final double arrowThickness, final Color arrowColor) {
+        this(associatedNode, arrowLength, arrowThickness, arrowColor, DEFAULT_TRANSLATE);
+    }
 
+    public ResizePanel(
+            final Node associatedNode,
+            final double arrowLength,
+            final double arrowThickness,
+            final Color arrowColor,
+            final Translate translate
+    ) {
         // property initialisation
 
         this.associatedNode = new SimpleObjectProperty<>(ResizePanel.this, "associated-node", DEFAULT_NODE);
@@ -98,6 +110,7 @@ public class ResizePanel extends Control {
         this.arrowThickness = new SimpleDoubleProperty(ResizePanel.this, "arrow-height", Arrow.DEFAULT_HEIGHT);
         this.arrowSpace = new SimpleStyleableDoubleProperty(ARROW_SPACE_CSS, ResizePanel.this, "arrow-space", DEFAULT_ARROW_SPACE);
         this.arrowColor = new SimpleObjectProperty<>(ResizePanel.this, "arrow-color", Arrow.DEFAULT_COLOR);
+        this.translate = new SimpleObjectProperty<>(ResizePanel.this, "translate", DEFAULT_TRANSLATE);
 
         // pseudo classes initialisation
 
@@ -109,6 +122,7 @@ public class ResizePanel extends Control {
         setArrowLength(arrowLength);
         setArrowThickness(arrowThickness);
         setArrowColor(arrowColor);
+        setTranslate(translate);
     }
 
     // =====================================
@@ -117,7 +131,7 @@ public class ResizePanel extends Control {
 
     @Override
     protected Skin<?> createDefaultSkin() {
-        return new ResizePanelSkin(ResizePanel.this);
+        return new ResizePanelSkin(ResizePanel.this, translate.get());
     }
 
     // =====================================
@@ -192,6 +206,10 @@ public class ResizePanel extends Control {
         return selected;
     }
 
+    public ObjectProperty<Translate> translateProperty() {
+        return translate;
+    }
+
     // =====================================
     //               GETTERS
     // =====================================
@@ -256,6 +274,11 @@ public class ResizePanel extends Control {
         selected.set(isSelected);
     }
 
+    public void setTranslate(final Translate newTranslate) {
+        if (!validateTranslate(newTranslate)) return;
+        translate.set(newTranslate);
+    }
+
     // =====================================
     //              VALIDATION
     // =====================================
@@ -272,4 +295,7 @@ public class ResizePanel extends Control {
         return newArrowSpace > 0;
     }
 
+    private boolean validateTranslate(final Translate translate) {
+        return translate != null;
+    }
 }
