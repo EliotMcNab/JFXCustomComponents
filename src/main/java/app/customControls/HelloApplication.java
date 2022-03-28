@@ -1,7 +1,6 @@
 package app.customControls;
 
 import app.customControls.controls.movementPane.MovementPane;
-import app.customControls.controls.resizePanel.ResizePanel;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -113,13 +112,8 @@ public class HelloApplication extends Application {
 
         final BorderPane root = new BorderPane();
         final MovementPane movementPane = new MovementPane();
-        final ResizePanel sizePanel = new ResizePanel();
         final Rectangle rectangle = new Rectangle(20, 20, Color.BLUE);
-        sizePanel.setAssociatedNode(rectangle);
-        Platform.runLater(() -> {
-            movementPane.setAssociatedNode(sizePanel);
-            // movementPane.setAssociatedNode(new Rectangle(200, 100, Color.GRAY));
-        });
+        Platform.runLater(() -> movementPane.setMovementNode(new Rectangle(200, 100, Color.BLUE)));
         root.setCenter(movementPane);
 
         Scene scene = new Scene(root);

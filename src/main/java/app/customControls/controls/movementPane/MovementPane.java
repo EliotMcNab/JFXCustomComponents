@@ -78,7 +78,7 @@ public class MovementPane extends Control {
         return movementNode.get();
     }
 
-    public void setAssociatedNode(final Node node) {
+    public void setMovementNode(final Node node) {
         movementNode.set(node);
     }
 

@@ -172,7 +172,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private void populate() {
 
         // adds the associated node to the node container
-        nodeContainer.setCenter(resizePanel.getAssociatedNode());
+        nodeContainer.setCenter(resizePanel.getResizeNode());
 
         // adds children to the content pane
 
@@ -200,7 +200,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         resizePanel.associatedNodeProperty().addListener(associatedNodeListener);
         resizePanel.arrowSpaceProperty().addListener(arrowSpaceListener);
         resizePanel.arrowColorProperty().addListener(colorChangeListener);
-        resizePanel.getAssociatedNode().setOnMousePressed(nodePressListener);
+        resizePanel.getResizeNode().setOnMousePressed(nodePressListener);
         resizePanel.selectedProperty().addListener(selectedListener);
         resizePanel.translateProperty().addListener(transformListener);
 
@@ -518,7 +518,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final boolean invertedH = resizeMode.equals(ResizeMode.INVERTED_Y) || resizeMode.equals(ResizeMode.INVERTED_BOTH);
 
         // determines the node's new size
-        final Node associatedNode = resizePanel.getAssociatedNode();
+        final Node associatedNode = resizePanel.getResizeNode();
         final double newWidth = getNodeWidth() + deltaWidth;
         final double newHeight = getNodeHeight() + deltaHeight;
 
@@ -598,11 +598,11 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // =====================================
 
     private double getNodeWidth() {
-        return resizePanel.getAssociatedNode().getBoundsInParent().getWidth();
+        return resizePanel.getResizeNode().getBoundsInParent().getWidth();
     }
 
     private double getNodeHeight() {
-        return resizePanel.getAssociatedNode().getBoundsInParent().getHeight();
+        return resizePanel.getResizeNode().getBoundsInParent().getHeight();
     }
 
     private double getContainerWidth() {

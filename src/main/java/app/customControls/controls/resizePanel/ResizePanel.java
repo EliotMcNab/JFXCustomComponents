@@ -118,7 +118,7 @@ public class ResizePanel extends Control {
 
         // property setting
 
-        setAssociatedNode(associatedNode);
+        setResizeNode(associatedNode);
         setArrowLength(arrowLength);
         setArrowThickness(arrowThickness);
         setArrowColor(arrowColor);
@@ -147,7 +147,7 @@ public class ResizePanel extends Control {
      * @return (DoubleProperty): associated node width property
      */
     public DoubleProperty nodeWidthProperty() {
-        final Node associatedNode = getAssociatedNode();
+        final Node associatedNode = getResizeNode();
 
         if (associatedNode instanceof Region) {
             return (DoubleProperty) ((Region) associatedNode).widthProperty();
@@ -165,7 +165,7 @@ public class ResizePanel extends Control {
      * @return (DoubleProperty): associated node height property
      */
     public DoubleProperty nodeHeightProperty() {
-        final Node associatedNode = getAssociatedNode();
+        final Node associatedNode = getResizeNode();
 
         if (associatedNode instanceof Region) {
             return (DoubleProperty) ((Region) associatedNode).heightProperty();
@@ -214,7 +214,7 @@ public class ResizePanel extends Control {
     //               GETTERS
     // =====================================
 
-    public Node getAssociatedNode() {
+    public Node getResizeNode() {
         return associatedNode.get();
     }
 
@@ -247,7 +247,7 @@ public class ResizePanel extends Control {
     //               SETTERS
     // =====================================
 
-    public void setAssociatedNode(final Node newNode) {
+    public void setResizeNode(final Node newNode) {
         associatedNode.setValue(newNode);
     }
 
