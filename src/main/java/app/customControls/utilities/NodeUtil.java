@@ -38,26 +38,4 @@ public class NodeUtil {
         Bounds bounds = node.localToScreen(node.getBoundsInLocal());
         return new Point2D(bounds.getMinX(), bounds.getMinY());
     }
-
-    public static void optimiseTransformations(final Node node, final Transform... newTransforms) {
-        // gets the node's current transformation
-        final ObservableList<Transform> currentTransforms = node.getTransforms();
-        Transform totalTransform = new Translate();
-
-        // adds all new transforms to the total transformations
-        for (Transform transform : newTransforms) {
-            totalTransform = totalTransform.createConcatenation(transform);
-        }
-
-        // adds all previous transforms to the total transformations
-        for (Transform transform : currentTransforms) {
-            totalTransform = totalTransform.createConcatenation(transform);
-        }
-
-        // removes previous transformations and adds the concatenated sum of all transformations
-        // (avoids having several hundred transformations applied to the node by optimising them into a single Transform)
-        currentTransforms.clear();
-        currentTransforms.add(totalTransform);
-    }
-
 }

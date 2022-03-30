@@ -9,6 +9,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
+import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 
 public class EffectsUtil {
@@ -116,5 +117,28 @@ public class EffectsUtil {
         return scale;
     }
 
+    static {
+/*
+        double scaleX = this.getX();
+        double scaleY = this.getY();
+        double scaleZ = this.getZ();
+        if (var1 instanceof Scale) {
+            Scale var8 = (Scale)var1;
+            if (var8.getPivotX() == this.getPivotX() && var8.getPivotY() == this.getPivotY() && var8.getPivotZ() == this.getPivotZ()) {
+                return new Scale(scaleX * var8.getX(), scaleY * var8.getY(), scaleZ * var8.getZ(), this.getPivotX(), this.getPivotY(), this.getPivotZ());
+            }
+        }
+
+        if (var1 instanceof Translate) {
+            Translate var32 = (Translate)var1;
+            double tx = var32.getX();
+            double ty = var32.getY();
+            double tz = var32.getZ();
+            if ((tx == 0.0D || scaleX != 1.0D && scaleX != 0.0D) && (ty == 0.0D || scaleY != 1.0D && scaleY != 0.0D) && (tz == 0.0D || scaleZ != 1.0D && scaleZ != 0.0D)) {
+                return new Scale(scaleX, scaleY, scaleZ, (scaleX != 1.0D ? scaleX * tx / (1.0D - scaleX) : 0.0D) + this.getPivotX(), (scaleY != 1.0D ? scaleY * ty / (1.0D - scaleY) : 0.0D) + this.getPivotY(), (scaleZ != 1.0D ? scaleZ * tz / (1.0D - scaleZ) : 0.0D) + this.getPivotZ());
+            }
+        }
+*/
+    }
 
 }

@@ -4,6 +4,7 @@ import app.customControls.controls.shapes.Arrow;
 import app.customControls.controls.shapes.Orientation;
 import app.customControls.utilities.KeyboardUtil;
 import app.customControls.utilities.ScreenUtil;
+import app.customControls.utilities.TransformUtil;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -13,6 +14,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
@@ -22,9 +24,10 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
-import static app.customControls.utilities.KeyboardUtil.Letter.ESC;
+import static app.customControls.utilities.KeyboardUtil.Letter.*;
 
 public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<ResizePanel> {
 
@@ -57,7 +60,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private final Arrow left;
     private final Arrow[] arrows;
     private final Pane contentPane;
-    private final BorderPane nodeContainer;
+    private final Pane nodeContainer;
 
     // associated size panel
 
@@ -66,10 +69,17 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // movement
 
     private Point2D lastMousePosition;
+    private Point2D lastNodePosition;
     private Orientation resizeDirection;
-    private final Translate translate;
     private boolean inLimbo;
     private boolean onArrow;
+
+    // transforms
+
+    private final Translate translate;
+    private final Translate adjustementTranslate;
+    private final Translate resizeNodeTranslate;
+    private final Scale scale;
 
     // listeners
 
@@ -85,13 +95,13 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private final EventHandler<MouseEvent> dragListener;
     private final EventHandler<MouseEvent> mouseReleaseListener;
     private final EventHandler<KeyEvent> keyPressListener;
-    private final ChangeListener<Translate> transformListener;
+    private final ChangeListener<Scale> scaleListener;
 
     // =====================================
     //              CONSTRUCTOR
     // =====================================
 
-    protected ResizePanelSkin(ResizePanel sizePanel, final Translate translate) {
+    protected ResizePanelSkin(ResizePanel sizePanel) {
         super(sizePanel);
 
         // saves associated size panel
@@ -114,14 +124,19 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.left = new Arrow(arrowWidth, arrowHeight, Orientation.LEFT, arrowColor, Arrow.ArrowType.DOUBLE);
         this.arrows = new Arrow[]{topLeft, top, topRight, right, bottomRight, bottom, bottomLeft, left};
         this.contentPane = new Pane();
-        this.nodeContainer = new BorderPane();
+        this.nodeContainer = new Pane();
 
         // initialising variables
 
         this.lastMousePosition = new Point2D(0, 0);
+        this.lastNodePosition = new Point2D(0, 0);
         this.resizeDirection = Orientation.NULL;
-        this.translate = translate;
-        resizePanel.getTransforms().add(translate);
+        this.translate = new Translate();
+        this.adjustementTranslate = new Translate();
+        this.resizeNodeTranslate = new Translate();
+        this.scale = new Scale();
+        resizePanel.getTransforms().addAll(translate, adjustementTranslate);
+        resizePanel.getResizeNode().getTransforms().add(scale);
 
         // initialising listeners
 
@@ -137,14 +152,14 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.dragListener = this::handleDrag;
         this.mouseReleaseListener = this::handleMouseRelease;
         this.keyPressListener = this::handleKeyPress;
-        this.transformListener = this::updateTransform;
+        this.scaleListener = this::updateScale;
 
         // initialisation
         style();
         populate();
         registerListeners();
         setArrowsVisible(false);
-        Platform.runLater(this::reposition);
+        Platform.runLater(this::updateSize);
     }
 
     // =====================================
@@ -172,7 +187,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private void populate() {
 
         // adds the associated node to the node container
-        nodeContainer.setCenter(resizePanel.getResizeNode());
+        nodeContainer.getChildren().add(resizePanel.getResizeNode());
 
         // adds children to the content pane
 
@@ -202,7 +217,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         resizePanel.arrowColorProperty().addListener(colorChangeListener);
         resizePanel.getResizeNode().setOnMousePressed(nodePressListener);
         resizePanel.selectedProperty().addListener(selectedListener);
-        resizePanel.translateProperty().addListener(transformListener);
+        resizePanel.scaleProperty().addListener(scaleListener);
 
         // node container property listeners
 
@@ -237,7 +252,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     private void updateAssociatedNode(ObservableValue<? extends Node> value, Node oldNode, Node newNode) {
         // adds new associated node to the content pane and removes the previous node
-        nodeContainer.setCenter(newNode);
+        nodeContainer.getChildren().remove(oldNode);
+        nodeContainer.getChildren().add(newNode);
+
+        // removes scaling transformation from old node and adds it to new node
+        oldNode.getTransforms().removeAll(scale);
+        newNode.getTransforms().addAll(scale);
 
         // adds the necessary listeners to the new node
         newNode.setOnMousePressed(nodePressListener);
@@ -324,15 +344,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         deselectArrow(resizeDirection);
     }
 
-    private void updateTransform(
-            ObservableValue<? extends Translate> value,
-            Translate oldTranslate,
-            Translate newTranslate
-    ) {
-        resizePanel.getTransforms().remove(oldTranslate);
-        resizePanel.getTransforms().add(newTranslate);
-    }
-
     // =====================================
     //             ACTIVATION
     // =====================================
@@ -370,21 +381,37 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // gets the mouse position and determines displacement since last drag
         final Point2D mousePosition = new Point2D(mouseEvent.getX(), mouseEvent.getY());
         final Point2D deltaMovement = mousePosition.subtract(lastMousePosition);
+        // adapts displacement to current node scale
+        final Point2D scaledMovement = new Point2D(deltaMovement.getX() / scale.getX(), deltaMovement.getY() / scale.getY());
 
         // resize node
-        resizeOnDrag(resizeDirection, deltaMovement);
+        resizeOnDrag(resizeDirection, scaledMovement);
     }
 
     private void resize() {
+        // TODO: update comments
+
+        final Insets containerInsets = getBorderInsets();
+        final double insetsWidth = containerInsets.getLeft() + containerInsets.getRight();
+        final double insetsHeight = containerInsets.getTop() + containerInsets.getBottom();
+        final double containerWidth = getNodeWidth() + insetsWidth;
+        final double containerHeight = getNodeHeight() + insetsHeight;
+
+        nodeContainer.setPrefWidth(containerWidth);
+        nodeContainer.setPrefHeight(containerHeight);
+
         // sets the node's width and height
-        resizePanel.setPrefWidth(getContainerWidth() + left.getWidth() + right.getWidth() + resizePanel.getArrowSpace() * 2);
-        resizePanel.setPrefHeight(getContainerHeight() + top.getWidth() + bottom.getWidth() + resizePanel.getArrowSpace() * 2);
+        resizePanel.setPrefWidth(containerWidth + left.getWidth() + right.getWidth() + resizePanel.getArrowSpace() * 2);
+        resizePanel.setPrefHeight(containerHeight + top.getWidth() + bottom.getWidth() + resizePanel.getArrowSpace() * 2);
     }
 
     private void resizeOnDrag(final Orientation direction, final Point2D amount) {
+        // corrects the resize amount to take scale into consideration
+        final Point2D correctedAmount = new Point2D(amount.getX(), amount.getY());
+
         // determines the difference in width and height and the resize mode based on resize direction
-        final double deltaWidth = determineDeltaWidth(direction, amount);
-        final double deltaHeight = determineDeltaHeight(direction, amount);
+        final double deltaWidth = determineDeltaWidth(direction, correctedAmount);
+        final double deltaHeight = determineDeltaHeight(direction, correctedAmount);
         final ResizeMode resizeMode = determineResizeMode(direction);
 
         // makes sure user cannot resize when outside an arrow
@@ -423,10 +450,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             final boolean canResizeBottom = mouseY >= bottomArrowCenter;
 
             // stops flip if mouse has not reached the correct coordinates
-            if      (xFlip && amount.getX() < 0 && !canResizeLeft  ) return;
-            else if (xFlip && amount.getX() > 0 && !canResizeRight ) return;
-            if      (yFlip && amount.getY() < 0 && !canResizeTop   ) return;
-            else if (yFlip && amount.getY() > 0 && !canResizeBottom) return;
+            if      (xFlip && correctedAmount.getX() < 0 && !canResizeLeft  ) return;
+            else if (xFlip && correctedAmount.getX() > 0 && !canResizeRight ) return;
+            if      (yFlip && correctedAmount.getY() < 0 && !canResizeTop   ) return;
+            else if (yFlip && correctedAmount.getY() > 0 && !canResizeBottom) return;
 
             // deselects the current arrow
             deselectArrow(resizeDirection);
@@ -438,7 +465,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             selectArrow(resizeDirection);
 
             // resizes the node with the new direction
-            resizeOnDrag(resizeDirection, amount);
+            resizeOnDrag(resizeDirection, correctedAmount);
             // marks the node as having exited limbo
             inLimbo = false;
             // exits method to abort resizing under current direction
@@ -519,12 +546,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // determines the node's new size
         final Node associatedNode = resizePanel.getResizeNode();
-        final double newWidth = getNodeWidth() + deltaWidth;
-        final double newHeight = getNodeHeight() + deltaHeight;
+        final double newWidth = getLocalNodeWidth() + deltaWidth;
+        final double newHeight = getLocalNodeHeight() + deltaHeight;
 
-        // translates the node to change resize direction
-        translate.setX(translate.getX() + (invertedW ? -deltaWidth: 0));
-        translate.setY(translate.getY() + (invertedH ? -deltaHeight: 0));
+        // translates the node to change resize direction, taking scale into consideration
+        translate.setX(translate.getX() + (invertedW ? -deltaWidth * scale.getX(): 0));
+        translate.setY(translate.getY() + (invertedH ? -deltaHeight * scale.getY(): 0));
 
         // updates the mouse's position to account for translation
         lastMousePosition = resizePanel.screenToLocal(ScreenUtil.getMousePosition());
@@ -539,6 +566,63 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         } else if (associatedNode instanceof Circle) {
             ((Circle) associatedNode).setRadius(Math.abs(newWidth / 2));
         }
+    }
+
+    // =====================================
+    //              SCALING
+    // =====================================
+
+    double test = 1;
+    boolean stop;
+    private void updateScale(ObservableValue<? extends Scale> value, Scale oldScale, Scale newScale) {
+        newScale.setX(newScale.getX() * test);
+        newScale.setY(newScale.getY() * test);
+
+        // resets the resize node's layoutX and layoutY values, so they do not interfere with Transforms
+        final Node resizeNode = resizePanel.getResizeNode();
+        // resizeNode.setLayoutX(0);
+        // resizeNode.setLayoutY(0);
+
+        // determines node displacement
+        final Point2D lastAdjustment = new Point2D(adjustementTranslate.getX(), adjustementTranslate.getY());
+        // determines difference between current node position with displacement and node position after scaling
+        final Point2D deltaPosition = newScale.transform(getResizeNodePosition()).subtract(lastAdjustment);
+
+        System.out.printf("old translate:%s\n", adjustementTranslate);
+        System.out.printf("node position:%s\n", getResizeNodePosition());
+        System.out.printf("last adjustment:%s\n", lastAdjustment);
+        System.out.printf("delta position:%s\n", deltaPosition);
+        System.out.printf("node container delta position:%s\n", resizeNode.localToParent(deltaPosition));
+
+        // translates the resize panel so that node container matches resize node position (moves resize node as well)
+        adjustementTranslate.setY(adjustementTranslate.getY() + deltaPosition.getY());
+        adjustementTranslate.setX(adjustementTranslate.getX() + deltaPosition.getX());
+        // translates resize node back to its original position
+        System.out.printf("new translate:%s\n", adjustementTranslate);
+
+        resizeNodeTranslate.setX(resizeNodeTranslate.getX() - deltaPosition.getX());
+        resizeNodeTranslate.setY(resizeNodeTranslate.getY() - deltaPosition.getY());
+
+        System.out.printf("resize node translate:%s\n", resizeNodeTranslate);
+
+        // concatenates new scale with translation (because JavaFx createConcatenation does not woooork hahAHHahaaHhaha)
+        final Scale concatenatedScale = TransformUtil.scaleAndTranslate(newScale, resizeNodeTranslate);
+        // updates node scale to match concatenation
+        scale.setX(concatenatedScale.getX());
+        scale.setY(concatenatedScale.getY());
+        scale.setPivotX(concatenatedScale.getPivotX());
+        scale.setPivotY(concatenatedScale.getPivotY());
+
+        System.out.printf("concatenated scale:%s\n", concatenatedScale);
+        System.out.println("--------");
+
+        test *= 1.1;
+        stop = true;
+
+        // updates resize node layoutX and layoutY to account for border
+        final Insets containerInsets = getBorderInsets();
+        // resizeNode.setLayoutX(resizeNode.getLayoutX() -getResizeNodeX() + containerInsets.getLeft());
+        // resizeNode.setLayoutY(resizeNode.getLayoutY() -getResizeNodeY() + containerInsets.getTop());
     }
 
     // =====================================
@@ -570,6 +654,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         left.moveTo(deltaX                                    , deltaY + nodeHeight / 2 + arrowSpace);
     }
 
+    // =====================================
+    //               BORDER
+    // =====================================
+
     private void handleBorderChange(ObservableValue<? extends Border> value, Border oldBorder, Border newBorder) {
 
         // gets the previous & current border size
@@ -589,12 +677,25 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         translate.setX(translate.getX() + deltaWidth / 2);
         translate.setY(translate.getY() + deltaHeight / 2);
 
-        // updates the size of the resize panel to take into account the new border
-        Platform.runLater(this::updateSize);
+        // TODO: add comments here
+        final Node resizeNode = resizePanel.getResizeNode();
+        resizeNode.setLayoutX(resizeNode.getLayoutX() + newInsets.getLeft() - previousInsets.getLeft());
+        resizeNode.setLayoutY(resizeNode.getLayoutY() + newInsets.getTop() - previousInsets.getBottom());
+
+        updateSize();
+    }
+
+    private Border getBorder() {
+        return nodeContainer.getBorder();
+    }
+
+    private Insets getBorderInsets() {
+        final Border containerBorder = getBorder();
+        return containerBorder == null ? new Insets(0) : containerBorder.getInsets();
     }
 
     // =====================================
-    //               GETTERS
+    //               0GETTERS
     // =====================================
 
     private double getNodeWidth() {
@@ -605,12 +706,37 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         return resizePanel.getResizeNode().getBoundsInParent().getHeight();
     }
 
+    private Point2D getResizeNodePosition() {
+        final Bounds bounds = resizePanel.getResizeNode().getBoundsInParent();
+        return new Point2D(bounds.getMinX(), bounds.getMinY());
+    }
+
+    private double getResizeNodeX() {
+        return getResizeNodePosition().getX();
+    }
+
+    private double getResizeNodeY() {
+        return getResizeNodePosition().getY();
+    }
+
+    private double getLocalNodeWidth() {
+        return resizePanel.getResizeNode().getBoundsInLocal().getWidth();
+    }
+
+    private double getLocalNodeHeight() {
+        return resizePanel.getResizeNode().getBoundsInLocal().getHeight();
+    }
+
     private double getContainerWidth() {
         return nodeContainer.getBoundsInParent().getWidth();
     }
 
     private double getContainerHeight() {
         return nodeContainer.getBoundsInParent().getHeight();
+    }
+
+    private Rectangle2D getContainerSize() {
+        return new Rectangle2D(0, 0, getContainerWidth(), getContainerHeight());
     }
 
     private Point2D getContainerPosition() {

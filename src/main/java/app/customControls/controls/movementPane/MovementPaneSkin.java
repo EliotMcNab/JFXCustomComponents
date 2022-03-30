@@ -4,6 +4,7 @@ import app.customControls.controls.resizePanel.ResizePanel;
 import app.customControls.controls.time.TimedAnimation;
 import app.customControls.utilities.EffectsUtil;
 import app.customControls.utilities.KeyboardUtil;
+import app.customControls.utilities.ScreenUtil;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -165,7 +166,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         this.container = new Pane();
         this.resizePanel = new ResizePanel();
         this.resizePanel.setEffect(NODE_IDLE_SHADOW);
-        this.resizePanel.getTransforms().addAll(drag, zoom);
+        this.resizePanel.getTransforms().add(drag);
 
         // initialise properties
 
@@ -607,7 +608,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         /*final Node associatedNode = movementPane.getAssociatedNode();
         final Point2D localPosition = associatedNode.parentToLocal(target);*/
 
-        final Point2D localPosition = resizePanel.parentToLocal(target);
+        final Node associatedNode = movementPane.getAssociatedNode();
+        final Point2D localPosition = associatedNode.screenToLocal(ScreenUtil.getMousePosition());
 
         // creates the zoom transformation
         final Scale newZoom = new Scale();
@@ -628,7 +630,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         // saves the current zoom
         scale = totalZoom.getX();
-
     }
 
     // =======================================
@@ -950,7 +951,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     protected void bindNode(final Node node) {
         resizePanel.setResizeNode(node);
-        // node.getTransforms().add(zoom);
+        node.getTransforms().add(zoom);
         Platform.runLater(() -> center(false));
     }
 

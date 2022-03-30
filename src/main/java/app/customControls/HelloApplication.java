@@ -1,12 +1,16 @@
 package app.customControls;
 
 import app.customControls.controls.movementPane.MovementPane;
+import app.customControls.controls.resizePanel.ResizePanel;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Scale;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -101,20 +105,25 @@ public class HelloApplication extends Application {
                 arrow2
         );*/
 
-        // size panel test
-        /*final AnchorPane root = new AnchorPane();
+        // resize panel test
+        final AnchorPane root = new AnchorPane();
         final ResizePanel sizePanel = new ResizePanel();
-        final Rectangle rectangle = new Rectangle(20, 20, Color.BLUE);
+        final Rectangle rectangle = new Rectangle(40, 40, Color.BLUE);
         sizePanel.setLayoutX(100);
         sizePanel.setLayoutY(100);
-        Platform.runLater(() -> sizePanel.setAssociatedNode(rectangle));
-        root.getChildren().add(sizePanel);*/
+        Platform.runLater(() -> sizePanel.setResizeNode(rectangle));
+        root.getChildren().add(sizePanel);
 
-        final BorderPane root = new BorderPane();
+        root.setOnKeyPressed(keyEvent -> {
+            if (keyEvent.getCode().equals(KeyCode.SPACE)) sizePanel.replaceScale(new Scale(2, 2, 20, 20));
+            else                                          sizePanel.replaceScale(new Scale(1, 1, 20, 20));
+        });
+
+        /*final BorderPane root = new BorderPane();
         final MovementPane movementPane = new MovementPane();
         final Rectangle rectangle = new Rectangle(20, 20, Color.BLUE);
         Platform.runLater(() -> movementPane.setMovementNode(new Rectangle(200, 100, Color.BLUE)));
-        root.setCenter(movementPane);
+        root.setCenter(movementPane);*/
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/app/customControls/style/app-style.css").toExternalForm());

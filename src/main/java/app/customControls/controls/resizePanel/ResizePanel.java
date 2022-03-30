@@ -11,6 +11,8 @@ import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.transform.Scale;
+import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
 
 import java.util.List;
@@ -29,6 +31,7 @@ public class ResizePanel extends Control {
     private static final Region DEFAULT_NODE = new Region();
     private static final double DEFAULT_ARROW_SPACE = 3;
     private static final Translate DEFAULT_TRANSLATE = new Translate();
+    private static final Scale DEFAULT_SCALE = new Scale();
 
     static {
         DEFAULT_NODE.setPrefWidth(50);
@@ -50,6 +53,7 @@ public class ResizePanel extends Control {
     private final DoubleProperty arrowThickness;
     private final ObjectProperty<Color> arrowColor;
     private final ObjectProperty<Translate> translate;
+    private final ObjectProperty<Scale> scale;
 
     // pseudo classes
 
@@ -92,16 +96,11 @@ public class ResizePanel extends Control {
      * @param arrowThickness (double): the thickness of arrow in the resize panel
      * @param arrowColor ({@link Color}): the color of arrows in the resize panel
      */
-    public ResizePanel(final Node associatedNode, final double arrowLength, final double arrowThickness, final Color arrowColor) {
-        this(associatedNode, arrowLength, arrowThickness, arrowColor, DEFAULT_TRANSLATE);
-    }
-
     public ResizePanel(
             final Node associatedNode,
             final double arrowLength,
             final double arrowThickness,
-            final Color arrowColor,
-            final Translate translate
+            final Color arrowColor
     ) {
         // property initialisation
 
@@ -111,6 +110,7 @@ public class ResizePanel extends Control {
         this.arrowSpace = new SimpleStyleableDoubleProperty(ARROW_SPACE_CSS, ResizePanel.this, "arrow-space", DEFAULT_ARROW_SPACE);
         this.arrowColor = new SimpleObjectProperty<>(ResizePanel.this, "arrow-color", Arrow.DEFAULT_COLOR);
         this.translate = new SimpleObjectProperty<>(ResizePanel.this, "translate", DEFAULT_TRANSLATE);
+        this.scale = new SimpleObjectProperty<>(ResizePanel.this, "scale", DEFAULT_SCALE);
 
         // pseudo classes initialisation
 
@@ -122,7 +122,6 @@ public class ResizePanel extends Control {
         setArrowLength(arrowLength);
         setArrowThickness(arrowThickness);
         setArrowColor(arrowColor);
-        setTranslate(translate);
     }
 
     // =====================================
@@ -131,7 +130,7 @@ public class ResizePanel extends Control {
 
     @Override
     protected Skin<?> createDefaultSkin() {
-        return new ResizePanelSkin(ResizePanel.this, translate.get());
+        return new ResizePanelSkin(ResizePanel.this);
     }
 
     // =====================================
@@ -210,6 +209,10 @@ public class ResizePanel extends Control {
         return translate;
     }
 
+    public ObjectProperty<Scale> scaleProperty() {
+        return scale;
+    }
+
     // =====================================
     //               GETTERS
     // =====================================
@@ -274,9 +277,22 @@ public class ResizePanel extends Control {
         selected.set(isSelected);
     }
 
-    public void setTranslate(final Translate newTranslate) {
-        if (!validateTranslate(newTranslate)) return;
+    public void replaceTranslate(final Translate newTranslate) {
+        if (!validateTransform(newTranslate)) return;
         translate.set(newTranslate);
+    }
+
+    public void replaceScale(final Scale newScale) {
+        if (!validateTransform(newScale)) return;
+        scale.set(newScale);
+    }
+
+    public void setScale(final double x, final double y, final double pivotX, final double pivotY) {
+        if (!validateScale(x, y)) return;
+        scale.get().setX(x);
+        scale.get().setY(y);
+        scale.get().setPivotX(pivotX);
+        scale.get().setPivotY(pivotY);
     }
 
     // =====================================
@@ -295,7 +311,11 @@ public class ResizePanel extends Control {
         return newArrowSpace > 0;
     }
 
-    private boolean validateTranslate(final Translate translate) {
-        return translate != null;
+    private boolean validateTransform(final Transform transform) {
+        return transform != null;
+    }
+
+    private boolean validateScale(final double x, final double y) {
+        return x >= 0 && y >= 0;
     }
 }
