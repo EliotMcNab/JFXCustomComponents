@@ -69,7 +69,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // movement
 
     private Point2D lastMousePosition;
-    private Point2D lastNodePosition;
     private Orientation resizeDirection;
     private boolean inLimbo;
     private boolean onArrow;
@@ -77,8 +76,9 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // transforms
 
     private final Translate translate;
-    private final Translate adjustementTranslate;
+    private final Translate adjustTranslate;
     private final Translate resizeNodeTranslate;
+    private final Scale oldScale;
     private final Scale scale;
 
     // listeners
@@ -95,7 +95,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private final EventHandler<MouseEvent> dragListener;
     private final EventHandler<MouseEvent> mouseReleaseListener;
     private final EventHandler<KeyEvent> keyPressListener;
-    private final ChangeListener<Scale> scaleListener;
+    private final ChangeListener<Boolean> zoomListener;
 
     // =====================================
     //              CONSTRUCTOR
@@ -129,13 +129,13 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // initialising variables
 
         this.lastMousePosition = new Point2D(0, 0);
-        this.lastNodePosition = new Point2D(0, 0);
         this.resizeDirection = Orientation.NULL;
         this.translate = new Translate();
-        this.adjustementTranslate = new Translate();
+        this.adjustTranslate = new Translate();
         this.resizeNodeTranslate = new Translate();
-        this.scale = new Scale();
-        resizePanel.getTransforms().addAll(translate, adjustementTranslate);
+        this.oldScale = new Scale();
+        this.scale = resizePanel.getScale();
+        resizePanel.getTransforms().addAll(translate, adjustTranslate);
         resizePanel.getResizeNode().getTransforms().add(scale);
 
         // initialising listeners
@@ -152,7 +152,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.dragListener = this::handleDrag;
         this.mouseReleaseListener = this::handleMouseRelease;
         this.keyPressListener = this::handleKeyPress;
-        this.scaleListener = this::updateScale;
+        this.zoomListener = this::updateZoom;
 
         // initialisation
         style();
@@ -217,7 +217,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         resizePanel.arrowColorProperty().addListener(colorChangeListener);
         resizePanel.getResizeNode().setOnMousePressed(nodePressListener);
         resizePanel.selectedProperty().addListener(selectedListener);
-        resizePanel.scaleProperty().addListener(scaleListener);
+
+        // zooming
+
+        resizePanel.zoomUpdateProperty().addListener(zoomListener);
 
         // node container property listeners
 
@@ -572,38 +575,48 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     //              SCALING
     // =====================================
 
-    double test = 1;
-    boolean stop;
-    private void updateScale(ObservableValue<? extends Scale> value, Scale oldScale, Scale newScale) {
-        newScale.setX(newScale.getX() * test);
-        newScale.setY(newScale.getY() * test);
+    private void updateZoom(ObservableValue<? extends Boolean> value, Boolean oldBoolean, Boolean newBoolean) {
+        // zoom value updating has started
+        if (newBoolean) {
+            // updates the old scale to save current zoom state
+            oldScale.setX(scale.getX());
+            oldScale.setY(scale.getY());
+            oldScale.setPivotX(scale.getPivotX());
+            oldScale.setPivotY(scale.getPivotY());
+
+            // removes scale from node transforms so that any changes to it will node affect the node
+            resizePanel.getResizeNode().getTransforms().remove(scale);
+        }
+        // zoom value updating has finished (can apply zoom)
+        else {
+            // calculates the zoom
+            zoom(scale);
+            // applies the zoom
+            resizePanel.getResizeNode().getTransforms().add(scale);
+        }
+    }
+
+    private void zoom(final Scale newScale) {
+
+        System.out.printf("old scale:%s\n", oldScale);
+        System.out.printf("new scale:%s\n", newScale);
 
         // resets the resize node's layoutX and layoutY values, so they do not interfere with Transforms
         final Node resizeNode = resizePanel.getResizeNode();
-        // resizeNode.setLayoutX(0);
-        // resizeNode.setLayoutY(0);
+        resizeNode.setLayoutX(0);
+        resizeNode.setLayoutY(0);
 
         // determines node displacement
-        final Point2D lastAdjustment = new Point2D(adjustementTranslate.getX(), adjustementTranslate.getY());
+        final Point2D lastAdjustment = new Point2D(adjustTranslate.getX(), adjustTranslate.getY());
         // determines difference between current node position with displacement and node position after scaling
         final Point2D deltaPosition = newScale.transform(getResizeNodePosition()).subtract(lastAdjustment);
 
-        System.out.printf("old translate:%s\n", adjustementTranslate);
-        System.out.printf("node position:%s\n", getResizeNodePosition());
-        System.out.printf("last adjustment:%s\n", lastAdjustment);
-        System.out.printf("delta position:%s\n", deltaPosition);
-        System.out.printf("node container delta position:%s\n", resizeNode.localToParent(deltaPosition));
-
         // translates the resize panel so that node container matches resize node position (moves resize node as well)
-        adjustementTranslate.setY(adjustementTranslate.getY() + deltaPosition.getY());
-        adjustementTranslate.setX(adjustementTranslate.getX() + deltaPosition.getX());
+        adjustTranslate.setY(adjustTranslate.getY() + deltaPosition.getY());
+        adjustTranslate.setX(adjustTranslate.getX() + deltaPosition.getX());
         // translates resize node back to its original position
-        System.out.printf("new translate:%s\n", adjustementTranslate);
-
         resizeNodeTranslate.setX(resizeNodeTranslate.getX() - deltaPosition.getX());
         resizeNodeTranslate.setY(resizeNodeTranslate.getY() - deltaPosition.getY());
-
-        System.out.printf("resize node translate:%s\n", resizeNodeTranslate);
 
         // concatenates new scale with translation (because JavaFx createConcatenation does not woooork hahAHHahaaHhaha)
         final Scale concatenatedScale = TransformUtil.scaleAndTranslate(newScale, resizeNodeTranslate);
@@ -613,16 +626,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         scale.setPivotX(concatenatedScale.getPivotX());
         scale.setPivotY(concatenatedScale.getPivotY());
 
-        System.out.printf("concatenated scale:%s\n", concatenatedScale);
-        System.out.println("--------");
-
-        test *= 1.1;
-        stop = true;
-
         // updates resize node layoutX and layoutY to account for border
         final Insets containerInsets = getBorderInsets();
-        // resizeNode.setLayoutX(resizeNode.getLayoutX() -getResizeNodeX() + containerInsets.getLeft());
-        // resizeNode.setLayoutY(resizeNode.getLayoutY() -getResizeNodeY() + containerInsets.getTop());
+        resizeNode.setLayoutX(resizeNode.getLayoutX() -getResizeNodeX() + containerInsets.getLeft());
+        resizeNode.setLayoutY(resizeNode.getLayoutY() -getResizeNodeY() + containerInsets.getTop());
     }
 
     // =====================================

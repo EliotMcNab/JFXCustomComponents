@@ -610,6 +610,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         final Node associatedNode = movementPane.getAssociatedNode();
         final Point2D localPosition = associatedNode.screenToLocal(ScreenUtil.getMousePosition());
+        // final Point2D localPosition = resizePanel.parentToLocal(target);
 
         // creates the zoom transformation
         final Scale newZoom = new Scale();
@@ -628,8 +629,15 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         zoom.setPivotX(totalZoom.getPivotX());
         zoom.setPivotY(totalZoom.getPivotY());
 
+        /*System.out.printf("total zoom:%s\n", totalZoom);
+        System.out.printf("zoom:%s\n", zoom);
+
+        System.out.println("===============");*/
+
         // saves the current zoom
         scale = totalZoom.getX();
+
+        resizePanel.setZoom(totalZoom.getX(), totalZoom.getY(), totalZoom.getPivotX(), totalZoom.getPivotY());
     }
 
     // =======================================
@@ -643,11 +651,18 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // determines the node's current shadow
         // (this should normally always be the idle shadow since node is dropped before reset,
         // but still useful if this method is called outside of rest method)
-        final DropShadow currentShadow = pickup ? NODE_PICKUP_SHADOW : NODE_IDLE_SHADOW;
+        /*final DropShadow currentShadow = pickup ? NODE_PICKUP_SHADOW : NODE_IDLE_SHADOW;*/
 
         // determines the necessary pivot for centering the node
-        final double pivotX = (getUnscaledNodeWidth() - currentShadow.getRadius() * 2) / 2 + currentShadow.getOffsetX();
-        final double pivotY = (getUnscaledNodeHeight() - currentShadow.getRadius() * 2) / 2 + currentShadow.getOffsetY();
+        /*final double pivotX = (getUnscaledNodeWidth() - currentShadow.getRadius() * 2);
+        final double pivotY = (getUnscaledNodeHeight() - currentShadow.getRadius() * 2);*/
+        final double pivotX = getUnscaledNodeWidth() / 2;
+        final double pivotY = getUnscaledNodeHeight() / 2;
+
+        System.out.printf("pivotX:%s\n", pivotX);
+        System.out.printf("pivotY:%s\n", pivotY);
+
+        final Scale zoom = resizePanel.getScale();
 
         // updates the node's pivot (slight teleportation visible here)
         zoom.setPivotX(pivotX);
@@ -695,7 +710,9 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                 )
         );
         // resets the scale once the node has finished shrinking
-        shrink.setOnFinished(actionEvent -> scale = 1);
+        shrink.setOnFinished(actionEvent -> {
+            scale = 1;
+        });
         return shrink;
     }
 
@@ -951,7 +968,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     protected void bindNode(final Node node) {
         resizePanel.setResizeNode(node);
-        node.getTransforms().add(zoom);
         Platform.runLater(() -> center(false));
     }
 

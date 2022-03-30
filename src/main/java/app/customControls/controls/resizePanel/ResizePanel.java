@@ -54,6 +54,7 @@ public class ResizePanel extends Control {
     private final ObjectProperty<Color> arrowColor;
     private final ObjectProperty<Translate> translate;
     private final ObjectProperty<Scale> scale;
+    private final BooleanProperty zoomUpdateProperty;
 
     // pseudo classes
 
@@ -111,6 +112,7 @@ public class ResizePanel extends Control {
         this.arrowColor = new SimpleObjectProperty<>(ResizePanel.this, "arrow-color", Arrow.DEFAULT_COLOR);
         this.translate = new SimpleObjectProperty<>(ResizePanel.this, "translate", DEFAULT_TRANSLATE);
         this.scale = new SimpleObjectProperty<>(ResizePanel.this, "scale", DEFAULT_SCALE);
+        this.zoomUpdateProperty = new SimpleBooleanProperty(ResizePanel.this, "zoom-update", false);
 
         // pseudo classes initialisation
 
@@ -213,6 +215,26 @@ public class ResizePanel extends Control {
         return scale;
     }
 
+    public DoubleProperty zoomXProperty() {
+        return scale.get().xProperty();
+    }
+
+    public DoubleProperty zoomYProperty() {
+        return scale.get().yProperty();
+    }
+
+    public DoubleProperty zoomPivotXProperty() {
+        return scale.get().pivotXProperty();
+    }
+
+    public DoubleProperty zoomPivotYProperty() {
+        return scale.get().pivotYProperty();
+    }
+
+    public BooleanProperty zoomUpdateProperty() {
+        return zoomUpdateProperty;
+    }
+
     // =====================================
     //               GETTERS
     // =====================================
@@ -239,6 +261,10 @@ public class ResizePanel extends Control {
 
     public boolean getSelected() {
         return selected.get();
+    }
+
+    public Scale getScale() {
+        return scale.get();
     }
 
     @Override
@@ -284,15 +310,19 @@ public class ResizePanel extends Control {
 
     public void replaceScale(final Scale newScale) {
         if (!validateTransform(newScale)) return;
+        zoomUpdateProperty.set(true);
         scale.set(newScale);
+        zoomUpdateProperty.set(false);
     }
 
-    public void setScale(final double x, final double y, final double pivotX, final double pivotY) {
+    public void setZoom(final double x, final double y, final double pivotX, final double pivotY) {
         if (!validateScale(x, y)) return;
+        zoomUpdateProperty.set(true);
         scale.get().setX(x);
         scale.get().setY(y);
         scale.get().setPivotX(pivotX);
         scale.get().setPivotY(pivotY);
+        zoomUpdateProperty.set(false);
     }
 
     // =====================================

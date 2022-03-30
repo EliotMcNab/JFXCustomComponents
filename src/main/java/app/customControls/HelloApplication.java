@@ -4,6 +4,8 @@ import app.customControls.controls.movementPane.MovementPane;
 import app.customControls.controls.resizePanel.ResizePanel;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.AnchorPane;
@@ -106,7 +108,7 @@ public class HelloApplication extends Application {
         );*/
 
         // resize panel test
-        final AnchorPane root = new AnchorPane();
+        /*final AnchorPane root = new AnchorPane();
         final ResizePanel sizePanel = new ResizePanel();
         final Rectangle rectangle = new Rectangle(40, 40, Color.BLUE);
         sizePanel.setLayoutX(100);
@@ -115,15 +117,17 @@ public class HelloApplication extends Application {
         root.getChildren().add(sizePanel);
 
         root.setOnKeyPressed(keyEvent -> {
-            if (keyEvent.getCode().equals(KeyCode.SPACE)) sizePanel.replaceScale(new Scale(2, 2, 20, 20));
-            else                                          sizePanel.replaceScale(new Scale(1, 1, 20, 20));
-        });
+            final double centerX = rectangle.getWidth() / 2;
+            final double centerY = rectangle.getHeight() / 2;
+            if (keyEvent.getCode().equals(KeyCode.SPACE)) sizePanel.setZoom(2, 2, centerX, centerY);
+            else                                          sizePanel.setZoom(1, 1, centerX, centerY);
+        });*/
 
-        /*final BorderPane root = new BorderPane();
+        final BorderPane root = new BorderPane();
         final MovementPane movementPane = new MovementPane();
         final Rectangle rectangle = new Rectangle(20, 20, Color.BLUE);
         Platform.runLater(() -> movementPane.setMovementNode(new Rectangle(200, 100, Color.BLUE)));
-        root.setCenter(movementPane);*/
+        root.setCenter(movementPane);
 
         Scene scene = new Scene(root);
         scene.getStylesheets().add(getClass().getResource("/app/customControls/style/app-style.css").toExternalForm());
