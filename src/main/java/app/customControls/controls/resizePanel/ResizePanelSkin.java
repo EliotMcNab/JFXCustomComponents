@@ -15,6 +15,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
@@ -27,6 +28,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
+import static app.customControls.controls.shapes.Orientation.*;
 import static app.customControls.utilities.KeyboardUtil.Letter.*;
 
 public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<ResizePanel> {
@@ -114,7 +116,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final double arrowHeight = sizePanel.getArrowThickness();
         final Color arrowColor = sizePanel.getArrowColor();
 
-        this.topLeft = new Arrow(arrowWidth, arrowHeight, Orientation.TOP_LEFT, arrowColor, Arrow.ArrowType.DOUBLE);
+        this.topLeft = new Arrow(arrowWidth, arrowHeight, TOP_LEFT, arrowColor, Arrow.ArrowType.DOUBLE);
         this.top = new Arrow(arrowWidth, arrowHeight, Orientation.TOP, arrowColor, Arrow.ArrowType.DOUBLE);
         this.topRight = new Arrow(arrowWidth, arrowHeight, Orientation.TOP_RIGHT, arrowColor, Arrow.ArrowType.DOUBLE);
         this.right = new Arrow(arrowWidth, arrowHeight, Orientation.RIGHT, arrowColor, Arrow.ArrowType.DOUBLE);
@@ -298,7 +300,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         deselectArrow(resizeDirection);
 
         // determines the resize direction based on the origin of the event
-        if (origin.equals(topLeft))          resizeDirection = Orientation.TOP_LEFT;
+        if (origin.equals(topLeft))          resizeDirection = TOP_LEFT;
         else if (origin.equals(top))         resizeDirection = Orientation.TOP;
         else if (origin.equals(topRight))    resizeDirection = Orientation.TOP_RIGHT;
         else if (origin.equals(right))       resizeDirection = Orientation.RIGHT;
@@ -315,6 +317,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     private void selectArrow(final Orientation resizeDirection) {
+        // selects the arrow corresponding to the current resize direction
         switch (resizeDirection) {
             case TOP_LEFT     -> topLeft.setSelected(true);
             case TOP          -> top.setSelected(true);
@@ -325,9 +328,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             case BOTTOM_LEFT  -> bottomLeft.setSelected(true);
             case LEFT         -> left.setSelected(true);
         }
+        // updates the cursor to match resize direction
+        updateCursor(resizeDirection);
     }
 
     private void deselectArrow(final Orientation resizeDirection) {
+        // deselects the arrow corresponding to the current resize direction
         switch (resizeDirection) {
             case TOP_LEFT     -> topLeft.setSelected(false);
             case TOP          -> top.setSelected(false);
@@ -345,6 +351,32 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         onArrow = false;
         // deselects the current arrow
         deselectArrow(resizeDirection);
+        // resets the cursor
+        resetCursor();
+    }
+
+    // =====================================
+    //               CURSOR
+    // ====================================
+
+    private void updateCursor(final Orientation resizeDirection) {
+        switch (resizeDirection) {
+            case TOP_LEFT     -> resizePanel.setCursor(Cursor.NW_RESIZE);
+            case TOP          -> resizePanel.setCursor(Cursor.N_RESIZE);
+            case TOP_RIGHT    -> resizePanel.setCursor(Cursor.NE_RESIZE);
+            case RIGHT        -> resizePanel.setCursor(Cursor.E_RESIZE);
+            case BOTTOM_RIGHT -> resizePanel.setCursor(Cursor.SE_RESIZE);
+            case BOTTOM       -> resizePanel.setCursor(Cursor.S_RESIZE);
+            case BOTTOM_LEFT  -> resizePanel.setCursor(Cursor.SW_RESIZE);
+            case LEFT         -> resizePanel.setCursor(Cursor.W_RESIZE);
+            case HORIZONTAL   -> resizePanel.setCursor(Cursor.H_RESIZE);
+            case VERTICAL     -> resizePanel.setCursor(Cursor.V_RESIZE);
+            case NULL         -> resizePanel.setCursor(Cursor.DEFAULT);
+        }
+    }
+
+    private void resetCursor() {
+        resizePanel.setCursor(Cursor.DEFAULT);
     }
 
     // =====================================
@@ -361,7 +393,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         setArrowsVisible(resizePanel.getSelected());
     }
 
-    private void setArrowsVisible(final boolean isVisible) {
+     private void setArrowsVisible(final boolean isVisible) {
         // sets all arrow's visibility to the specified value
         for (Arrow arrow : arrows) {
             arrow.setVisible(isVisible);
@@ -387,8 +419,11 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // adapts displacement to current node scale
         final Point2D scaledMovement = new Point2D(deltaMovement.getX() / scale.getX(), deltaMovement.getY() / scale.getY());
 
+        // determines if resize must be mirrored
+        final boolean isMirrored = mouseEvent.isShiftDown();
+
         // resize node
-        resizeOnDrag(resizeDirection, scaledMovement);
+        resizeOnDrag(resizeDirection, scaledMovement, isMirrored);
     }
 
     private void resize() {
@@ -408,7 +443,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         resizePanel.setPrefHeight(containerHeight + top.getWidth() + bottom.getWidth() + resizePanel.getArrowSpace() * 2);
     }
 
-    private void resizeOnDrag(final Orientation direction, final Point2D amount) {
+    private void resizeOnDrag(final Orientation direction, final Point2D amount, final boolean mirrored) {
         // corrects the resize amount to take scale into consideration
         final Point2D correctedAmount = new Point2D(amount.getX(), amount.getY());
 
@@ -468,15 +503,20 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             selectArrow(resizeDirection);
 
             // resizes the node with the new direction
-            resizeOnDrag(resizeDirection, correctedAmount);
+            resizeOnDrag(resizeDirection, correctedAmount, mirrored);
             // marks the node as having exited limbo
             inLimbo = false;
             // exits method to abort resizing under current direction
             return;
         }
 
+        /*System.out.printf("resize direction:%s\n", determineResizeSide(direction, deltaWidth, deltaHeight));
+        System.out.println("=================");*/
+
+        // determineResizeSide(direction, deltaWidth, deltaHeight);
+
         // resizes the associated node
-        resizeNode(deltaWidth, deltaHeight, resizeMode);
+        resizeNode(deltaWidth, deltaHeight, resizeMode, mirrored);
 
     }
 
@@ -519,7 +559,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             case TOP          -> Orientation.BOTTOM;
             case TOP_RIGHT    -> {
                 if (getNodeWidth() + deltaWidth < 0 && getNodeHeight() + deltaHeight < 0) yield Orientation.BOTTOM_LEFT;
-                if (getNodeWidth() + deltaWidth < 0)                                      yield Orientation.TOP_LEFT;
+                if (getNodeWidth() + deltaWidth < 0)                                      yield TOP_LEFT;
                 else                                                                      yield Orientation.BOTTOM_RIGHT;
             }
             case RIGHT        -> Orientation.LEFT;
@@ -532,14 +572,14 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             case BOTTOM_LEFT  -> {
                 if (getNodeWidth() + deltaWidth < 0 && getNodeHeight() + deltaHeight < 0) yield Orientation.TOP_RIGHT;
                 if (getNodeWidth() + deltaWidth < 0)                                      yield Orientation.BOTTOM_RIGHT;
-                else                                                                      yield Orientation.TOP_LEFT;
+                else                                                                      yield TOP_LEFT;
             }
             case LEFT         -> Orientation.RIGHT;
             default           -> throw new IllegalStateException("Unexpected value: " + direction);
         };
     }
 
-    private void resizeNode(double deltaWidth, double deltaHeight, ResizeMode resizeMode) {
+    private void resizeNode(double deltaWidth, double deltaHeight, ResizeMode resizeMode, final boolean mirrored) {
         // aborts resizing if change in width and height would lead to negative size
         if (!validateSize(deltaWidth, deltaHeight)) return;
 
@@ -549,12 +589,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // determines the node's new size
         final Node associatedNode = resizePanel.getResizeNode();
-        final double newWidth = getLocalNodeWidth() + deltaWidth;
-        final double newHeight = getLocalNodeHeight() + deltaHeight;
+        final double newWidth = getLocalNodeWidth() + deltaWidth * (mirrored ? 2 : 1);
+        final double newHeight = getLocalNodeHeight() + deltaHeight * (mirrored ? 2 : 1);
 
         // translates the node to change resize direction, taking scale into consideration
-        translate.setX(translate.getX() + (invertedW ? -deltaWidth * scale.getX(): 0));
-        translate.setY(translate.getY() + (invertedH ? -deltaHeight * scale.getY(): 0));
+        translate.setX(translate.getX() + (invertedW ? -deltaWidth * scale.getX(): -deltaWidth * (mirrored ? 1 : 0)));
+        translate.setY(translate.getY() + (invertedH ? -deltaHeight * scale.getY(): -deltaHeight * (mirrored ? 1 : 0)));
 
         // updates the mouse's position to account for translation
         lastMousePosition = resizePanel.screenToLocal(ScreenUtil.getMousePosition());
@@ -569,6 +609,29 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         } else if (associatedNode instanceof Circle) {
             ((Circle) associatedNode).setRadius(Math.abs(newWidth / 2));
         }
+    }
+
+    private Orientation determineResizeSide(final Orientation resizeCorner, final double deltaX, final double deltaY) {
+        // gets the size of the container
+        final double width = getContainerWidth();
+        final double height = getContainerHeight();
+        // determines the mouse's position relative to the current corner
+        final double mouseX = width + Math.abs(deltaX) * 100;
+        final double mouseY = height + Math.abs(deltaY) * 100;
+        /*System.out.printf("resize corner:%s\n", resizeCorner);
+        System.out.printf("mouseX:%s\n", mouseX);
+        System.out.printf("mouseY:%s\n", mouseY);*/
+        // determines the angle of the current corner and the mouse's position
+        final double alpha = Math.atan(height / width);
+        final double beta = Math.atan(mouseY / mouseX);
+        /*System.out.printf("alpha:%s\n", alpha);
+        System.out.printf("beta:%s\n", beta);
+        System.out.println("==================");*/
+        // determines which side is currently dominant in resize
+        if ((resizeCorner.equals(TOP_LEFT) || resizeCorner.equals(BOTTOM_LEFT)) && beta <= alpha) return LEFT;
+        if ((resizeCorner.equals(TOP_RIGHT) || resizeCorner.equals(TOP_LEFT)) && beta > alpha) return TOP;
+        if ((resizeCorner.equals(BOTTOM_RIGHT) || resizeCorner.equals(TOP_RIGHT)) && beta <= alpha) return RIGHT;
+        return BOTTOM;
     }
 
     // =====================================
