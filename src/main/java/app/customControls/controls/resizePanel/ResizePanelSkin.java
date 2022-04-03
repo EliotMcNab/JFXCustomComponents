@@ -292,6 +292,8 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         deselectArrow(resizeDirection);
 
+        final Orientation previousResizeDirection = resizeDirection;
+
         // determines the resize direction based on the origin of the event
         if (origin.equals(topLeft))          resizeDirection = TOP_LEFT;
         else if (origin.equals(top))         resizeDirection = Orientation.TOP;
@@ -499,6 +501,15 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             // marks the mouse as being at the center of the size panel, between any arrows
             inLimbo = true;
 
+            if (xFlip) {
+                counterMovement(-getNodeWidth(), 0, resizeMode, false);
+                setNodeWidth(0);
+            }
+            if (yFlip) {
+                counterMovement(-getNodeHeight(), 0, resizeMode, false);
+                setNodeHeight(0);
+            }
+
             // determines if the mouse has reached the correct coordinates to switch the resize orientation
             final boolean canResizeRight = mouseX >= rightArrowCenter;
             final boolean canResizeLeft = mouseX <= leftArrowCenter;
@@ -519,9 +530,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
             // updates the selected arrow
             selectArrow(resizeDirection);
-
-            // resizes the node with the new direction
-            resizeOnDrag(resizeDirection, correctedAmount, mirrored, scaled);
             // marks the node as having exited limbo
             inLimbo = false;
             // exits method to abort resizing under current direction
@@ -600,6 +608,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // aborts resizing if change in width and height would lead to negative size
         if (!validateSize(deltaWidth, deltaHeight)) return;
 
+        System.out.printf("node width      :%s\n", getNodeWidth());
+        System.out.printf("resize direction:%s\n", resizeDirection);
+        System.out.printf("delta width     :%s\n", deltaWidth);
+        System.out.printf("delta height    :%s\n", deltaHeight);
+        System.out.println("================");
+
         // determines the node's new size
         final double newWidth = getLocalNodeWidth() + deltaWidth * (mirrored ? 2 : 1);
         final double newHeight = getLocalNodeHeight() + deltaHeight * (mirrored ? 2 : 1);
@@ -674,6 +688,14 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         } else if (resizeNode instanceof Circle) {
             ((Circle) resizeNode).setRadius(Math.abs(width / 2));
         }
+    }
+
+    final void setNodeWidth(final double width) {
+        setNodeSize(width, getNodeHeight());
+    }
+
+    final void setNodeHeight(final double height) {
+        setNodeSize(getNodeWidth(), height);
     }
 
     final Rectangle2D getScaledNodeSize(final Orientation resizeDirection, final ResizeMode resizeMode) {
