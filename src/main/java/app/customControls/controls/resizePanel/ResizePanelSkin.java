@@ -28,12 +28,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
-import javax.sound.sampled.Port;
-import javax.swing.*;
-
 import static app.customControls.controls.shapes.Orientation.*;
 import static app.customControls.utilities.KeyboardUtil.Letter.*;
-import static app.customControls.utilities.KeyboardUtil.Modifier.CTRL;
 
 public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<ResizePanel> {
 
@@ -74,7 +70,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     // movement
 
-    private Point2D lastMousePosition;
     private Orientation resizeDirection;
     private boolean inLimbo;
     private boolean onArrow;
@@ -98,7 +93,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private final ChangeListener<Border> borderListener;
     private final InvalidationListener selectedListener;
     private final EventHandler<MouseEvent> nodePressListener;
-    private final EventHandler<MouseEvent> mousePressListener;
     private final EventHandler<MouseEvent> resizeDirectionListener;
     private final EventHandler<MouseEvent> dragListener;
     private final EventHandler<MouseEvent> mouseReleaseListener;
@@ -141,7 +135,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // initialising variables
 
-        this.lastMousePosition = new Point2D(0, 0);
         this.resizeDirection = Orientation.NULL;
         this.translate = new Translate();
         this.adjustTranslate = new Translate();
@@ -161,7 +154,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.borderListener = this::handleBorderChange;
         this.selectedListener = this::handleSelection;
         this.nodePressListener = this::handleNodePress;
-        this.mousePressListener = this::updateMousePosition;
         this.resizeDirectionListener = this::updateResizeDirection;
         this.dragListener = this::handleDrag;
         this.mouseReleaseListener = this::handleMouseRelease;
@@ -243,7 +235,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // mouse listeners
 
-        resizePanel.setOnMousePressed(mousePressListener);
         resizePanel.setOnMouseDragged(dragListener);
         resizePanel.setOnMouseReleased(mouseReleaseListener);
 
@@ -293,16 +284,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         for (Arrow arrow : arrows) {
             arrow.setColor(resizePanel.getArrowColor());
         }
-    }
-
-    private void updateMousePosition(final MouseEvent mouseEvent) {
-        // updates the previous mouse position to the mouse event's position
-        updateMousePosition(new Point2D(mouseEvent.getX(), mouseEvent.getY()));
-    }
-
-    private void updateMousePosition(final Point2D newMousePosition) {
-        // updates the mouse position to the specified coordinates
-        lastMousePosition = newMousePosition;
     }
 
     private void updateResizeDirection(final MouseEvent mouseEvent) {
@@ -427,9 +408,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // if the mouse is not on an arrow aborts drag
         if (!onArrow) return;
 
-        // gets the mouse position and determines displacement since last drag
+        // gets the mouse position
         final Point2D mousePosition = new Point2D(mouseEvent.getX(), mouseEvent.getY());
-        final Point2D deltaMovement = mousePosition.subtract(lastMousePosition);
+        // determines the path from the resize arrow to the mouse
+        final Point2D deltaMovement = mousePosition.subtract(getResizeArrowPosition(resizeDirection));
         // adapts displacement to current node scale
         final Point2D scaledMovement = new Point2D(deltaMovement.getX() / scale.getX(), deltaMovement.getY() / scale.getY());
 
@@ -451,24 +433,27 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     private void resize() {
-        // TODO: update comments
-
+        // gets the size of the border in the node container
         final Insets containerInsets = getBorderInsets();
         final double insetsWidth = containerInsets.getLeft() + containerInsets.getRight();
         final double insetsHeight = containerInsets.getTop() + containerInsets.getBottom();
+        // gets the size of the node container
         final double containerWidth = getNodeWidth() + insetsWidth;
         final double containerHeight = getNodeHeight() + insetsHeight;
 
+        // sets the node container's size
         nodeContainer.setPrefWidth(containerWidth);
         nodeContainer.setPrefHeight(containerHeight);
 
-
+        // determines the resize panel's size
         final double resizeWidth = containerWidth + left.getWidth() + right.getWidth() + resizePanel.getArrowSpace() * 2;
         final double resizeHeight = containerHeight + top.getWidth() + bottom.getWidth() + resizePanel.getArrowSpace() * 2;
 
+        // sets the resize panel's size
         resizePanel.setPrefWidth(resizeWidth);
         resizePanel.setPrefHeight(resizeHeight);
 
+        // sets the node container's size to match the resize panel
         contentPane.setPrefWidth(resizeWidth);
         contentPane.setPrefHeight(resizeHeight);
     }
@@ -496,8 +481,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final Point2D mousePosition = resizePanel.screenToLocal(ScreenUtil.getMousePosition());
         final double mouseX = mousePosition.getX();
         final double mouseY = mousePosition.getY();
-        // updates the mouse's position accordingly
-        updateMousePosition(new Point2D(mouseX, mouseY));
 
         // checks that the user is in the range of the arrow used for resizing
         // range depends on the orientation and does not necessarily mean the user is ON the arrow.
@@ -545,17 +528,8 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             return;
         }
 
-        final Bounds bounds = resizePanel.getBoundsInParent();
-        // System.out.printf("resize direction       :%s\n", resizeDirection);
-        // System.out.printf("relative mouse position:%s\n", getRelativeMouseCoordinates(resizeDirection, resizeMode));
-        // System.out.printf("relative mouse angle:%s\n", getRelativeMouseAngle(resizeDirection, resizeMode));
-        // System.out.println("==============");
-
         if (scaled) {
-            final Point2D mouseCoordinates = getRelativeMouseCoordinates(resizeDirection, resizeMode);
-            System.out.printf("relative mouse position:%s\n", mouseCoordinates);
-            System.out.printf("relative mouse angle   :%s\n", Math.toDegrees(getRelativeMouseAngle(mouseCoordinates)));
-            System.out.println("==============");
+            // scales the associated node
             scaleNode(resizeDirection, resizeMode, mirrored);
         } else {
             // resizes the associated node
@@ -633,54 +607,34 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // translates the node to change resize direction, taking scale into consideration
         counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
 
-        // updates the mouse's position to account for translation
-        lastMousePosition = resizePanel.screenToLocal(ScreenUtil.getMousePosition());
-
         // resizes the node based on its class
         setNodeSize(newWidth, newHeight);
     }
 
     private void scaleNode(final Orientation resizeDirection, final ResizeMode resizeMode, final boolean mirrored) {
-        /*final Rectangle2D scaledNodeSize = getScaledNodeSize(resizeDirection, resizeMode);
-        final double scaledWidth = scaledNodeSize.getWidth();
-        final double scaledHeight = scaledNodeSize.getHeight();
-
-        final boolean isScaling = scaledWidth != 0 && scaledHeight != 0;
-
-        final Rectangle2D nodeSize = getNodeSize();
-        final double deltaWidth = isScaling ? scaledNodeSize.getWidth() - nodeSize.getWidth() : 0;
-        final double deltaHeight = isScaling ? scaledNodeSize.getHeight() - nodeSize.getHeight() : 0;
-
-        System.out.printf("node width  :%s\n", nodeSize.getWidth());
-        System.out.printf("node height :%s\n", nodeSize.getHeight());
-        System.out.printf("delta width :%s\n", deltaWidth);
-        System.out.printf("delta height:%s\n", deltaHeight);
-        System.out.println("================");
-
-        counterMovement(deltaWidth, deltaHeight, resizeMode, false);
-
-        // System.out.printf("resize mode            :%s\n", resizeMode);
-
-        setNodeSize(getLocalNodeWidth() + deltaWidth, getLocalNodeHeight() + deltaHeight);*/
-
+        // determines the size of the node after scaling
         final Rectangle2D scaledNodeSize = getScaledNodeSize(resizeDirection, resizeMode);
         final double scaledWidth = scaledNodeSize.getWidth();
         final double scaledHeight = scaledNodeSize.getHeight();
 
+        // determines whether scaling is being applied
+        // (has node size reached 0 ?)
         final boolean isScaling = scaledWidth != 0 && scaledHeight != 0;
 
+        // gets the current node size
         final Rectangle2D nodeSize = getNodeSize();
+        // determines the difference in size between the scaled node and the current node
         final double deltaWidth = isScaling ? scaledNodeSize.getWidth() - nodeSize.getWidth() : 0;
         final double deltaHeight = isScaling ? scaledNodeSize.getHeight() - nodeSize.getHeight() : 0;
 
-        System.out.printf("mirrored:%s\n", mirrored);
-        System.out.println("============");
-
+        // counters the node's movement if necessary
         counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
 
+        // determines the node's final size in the case where the scaling is mirrored
         final double finalWidth = mirrored ? getLocalNodeWidth() + deltaWidth * 2 : scaledWidth;
         final double finalHeight = mirrored ? getLocalNodeHeight() + deltaHeight * 2 : scaledHeight;
 
+        // updates the node's size
         setNodeSize(finalWidth, finalHeight);
     }
 
@@ -690,6 +644,9 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             final ResizeMode resizeMode,
             final boolean mirrored
     ) {
+        // if there is no need to counter the node's movement, exits the method
+        if (resizeMode.equals(ResizeMode.NORMAL) && !mirrored) return;
+
         // determines whether to invert node movement along x-axis or y-axis
         final boolean invertX = resizeMode.equals(ResizeMode.INVERTED_X) || resizeMode.equals(ResizeMode.INVERTED_BOTH);
         final boolean invertY = resizeMode.equals(ResizeMode.INVERTED_Y) || resizeMode.equals(ResizeMode.INVERTED_BOTH);
@@ -704,8 +661,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     final void setNodeSize(final double width, final double height) {
+        // gets the associated node
         final Node resizeNode = resizePanel.getResizeNode();
 
+        // resizes the node depending on its type
         if (resizeNode instanceof Region) {
             ((Region) resizeNode).setPrefWidth(Math.abs(width));
             ((Region) resizeNode).setPrefHeight(Math.abs(height));
@@ -718,27 +677,33 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     final Rectangle2D getScaledNodeSize(final Orientation resizeDirection, final ResizeMode resizeMode) {
-
+        // gets the mouse's position relative to the corner opposite to the resize direction
         final Point2D relativeMouseCoordinates = getRelativeMouseCoordinates(resizeDirection, resizeMode);
+        // determines the mouse's angle relative to the corner opposite to the resize direction
         final double mouseAngle = getRelativeMouseAngle(relativeMouseCoordinates);
 
-        // System.out.printf("node angle:%s\n", Math.toDegrees(nodeAngle));
-        // System.out.printf("mouse angle:%s\n", Math.toDegrees(mouseAngle));
-
+        // the node's size after scaling
         final double scaledWidth;
         final double scaledHeight;
 
+        // we know the node's height
         if (mouseAngle > Math.PI / 2 - nodeAngle) {
             scaledHeight = relativeMouseCoordinates.getY();
             scaledWidth = scaledHeight / Math.tan(nodeAngle);
-        } else if (mouseAngle < Math.PI / 2 - nodeAngle) {
+        }
+        // we know the node's width
+        else if (mouseAngle < Math.PI / 2 - nodeAngle) {
             scaledWidth = relativeMouseCoordinates.getX();
             scaledHeight = scaledWidth * Math.tan(nodeAngle);
-        } else {
+        }
+        // mouse position is in the diagonal of the node's bounding box, so mouse position respects node scale,
+        // and we know both scaled node width and height
+        else {
             scaledWidth = relativeMouseCoordinates.getX();
             scaledHeight = relativeMouseCoordinates.getY();
         }
 
+        // returns the scaled node's size
         return new Rectangle2D(0, 0, scaledWidth, scaledHeight);
     }
 
@@ -813,7 +778,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             oldScale.setPivotX(scale.getPivotX());
             oldScale.setPivotY(scale.getPivotY());
 
-            // removes scale from node transforms so that any changes to it will node affect the node
+            // removes scale from node transforms so that any changes to it will not affect the node
             resizePanel.getResizeNode().getTransforms().remove(scale);
         }
         // zoom value updating has finished (can apply zoom)
@@ -895,7 +860,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // =====================================
 
     private void handleBorderChange(ObservableValue<? extends Border> value, Border oldBorder, Border newBorder) {
-
         // gets the previous & current border size
         final Insets previousInsets = oldBorder == null ? new Insets(0) : oldBorder.getInsets();
         final Insets newInsets = newBorder == null ? new Insets(0) : newBorder.getInsets();
@@ -913,11 +877,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         translate.setX(translate.getX() + deltaWidth / 2);
         translate.setY(translate.getY() + deltaHeight / 2);
 
-        // TODO: add comments here
+        // moves the associated node to take into account the border's thickness
         final Node resizeNode = resizePanel.getResizeNode();
         resizeNode.setLayoutX(resizeNode.getLayoutX() + newInsets.getLeft() - previousInsets.getLeft());
         resizeNode.setLayoutY(resizeNode.getLayoutY() + newInsets.getTop() - previousInsets.getBottom());
 
+        // updates the size of the resize panel
         updateSize();
     }
 
@@ -933,6 +898,29 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // =====================================
     //               0GETTERS
     // =====================================
+
+    private Point2D getResizeArrowPosition(final Orientation resizeDirection) {
+        return switch (resizeDirection) {
+            case TOP_LEFT     -> getArrowCenter(topLeft);
+            case TOP          -> getArrowCenter(top);
+            case TOP_RIGHT    -> getArrowCenter(topRight);
+            case RIGHT        -> getArrowCenter(right);
+            case BOTTOM_RIGHT -> getArrowCenter(bottomRight);
+            case BOTTOM       -> getArrowCenter(bottom);
+            case BOTTOM_LEFT  -> getArrowCenter(bottomLeft);
+            case LEFT         -> getArrowCenter(left);
+            default           -> throw new IllegalStateException("Invalid arrow direction: " + resizeDirection);
+        };
+    }
+
+    private Point2D getArrowCenter(final Arrow arrow) {
+        final Bounds arrowBounds = arrow.getBoundsInParent();
+        final double width = arrowBounds.getWidth();
+        final double height = arrowBounds.getHeight();
+        final double arrowX = arrowBounds.getMinX();
+        final double arrowY = arrowBounds.getMinY();
+        return new Point2D(arrowX + width / 2, arrowY + height / 2);
+    }
 
     private Rectangle2D getNodeSize() {
         final Bounds bounds = resizePanel.getResizeNode().getBoundsInParent();
@@ -974,10 +962,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     private double getContainerHeight() {
         return nodeContainer.getBoundsInParent().getHeight();
-    }
-
-    private Rectangle2D getContainerSize() {
-        return new Rectangle2D(0, 0, getContainerWidth(), getContainerHeight());
     }
 
     private Point2D getContainerPosition() {
