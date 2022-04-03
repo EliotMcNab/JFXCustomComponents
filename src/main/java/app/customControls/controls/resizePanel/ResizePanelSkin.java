@@ -556,7 +556,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             System.out.printf("relative mouse position:%s\n", mouseCoordinates);
             System.out.printf("relative mouse angle   :%s\n", Math.toDegrees(getRelativeMouseAngle(mouseCoordinates)));
             System.out.println("==============");
-            scaleNode(resizeDirection, resizeMode);
+            scaleNode(resizeDirection, resizeMode, mirrored);
         } else {
             // resizes the associated node
             resizeNode(deltaWidth, deltaHeight, resizeMode, mirrored);
@@ -626,12 +626,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // aborts resizing if change in width and height would lead to negative size
         if (!validateSize(deltaWidth, deltaHeight)) return;
 
-        // determines if resizing is inverted along the x-axis or y-axis (if node is being resized to top or left)
-        final boolean invertedW = resizeMode.equals(ResizeMode.INVERTED_X) || resizeMode.equals(ResizeMode.INVERTED_BOTH);
-        final boolean invertedH = resizeMode.equals(ResizeMode.INVERTED_Y) || resizeMode.equals(ResizeMode.INVERTED_BOTH);
-
         // determines the node's new size
-        final Node associatedNode = resizePanel.getResizeNode();
         final double newWidth = getLocalNodeWidth() + deltaWidth * (mirrored ? 2 : 1);
         final double newHeight = getLocalNodeHeight() + deltaHeight * (mirrored ? 2 : 1);
 
@@ -645,21 +640,48 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         setNodeSize(newWidth, newHeight);
     }
 
-    private void scaleNode(final Orientation resizeDirection, final ResizeMode resizeMode) {
-
-        final Rectangle2D scaledNodeSize = getScaledNodeSize(resizeDirection, resizeMode);
+    private void scaleNode(final Orientation resizeDirection, final ResizeMode resizeMode, final boolean mirrored) {
+        /*final Rectangle2D scaledNodeSize = getScaledNodeSize(resizeDirection, resizeMode);
         final double scaledWidth = scaledNodeSize.getWidth();
         final double scaledHeight = scaledNodeSize.getHeight();
 
+        final boolean isScaling = scaledWidth != 0 && scaledHeight != 0;
+
         final Rectangle2D nodeSize = getNodeSize();
-        final double deltaWidth = scaledNodeSize.getWidth() - nodeSize.getWidth();
-        final double deltaHeight = scaledNodeSize.getHeight() - nodeSize.getHeight();
+        final double deltaWidth = isScaling ? scaledNodeSize.getWidth() - nodeSize.getWidth() : 0;
+        final double deltaHeight = isScaling ? scaledNodeSize.getHeight() - nodeSize.getHeight() : 0;
+
+        System.out.printf("node width  :%s\n", nodeSize.getWidth());
+        System.out.printf("node height :%s\n", nodeSize.getHeight());
+        System.out.printf("delta width :%s\n", deltaWidth);
+        System.out.printf("delta height:%s\n", deltaHeight);
+        System.out.println("================");
 
         counterMovement(deltaWidth, deltaHeight, resizeMode, false);
 
         // System.out.printf("resize mode            :%s\n", resizeMode);
 
-        setNodeSize(scaledWidth, scaledHeight);
+        setNodeSize(getLocalNodeWidth() + deltaWidth, getLocalNodeHeight() + deltaHeight);*/
+
+        final Rectangle2D scaledNodeSize = getScaledNodeSize(resizeDirection, resizeMode);
+        final double scaledWidth = scaledNodeSize.getWidth();
+        final double scaledHeight = scaledNodeSize.getHeight();
+
+        final boolean isScaling = scaledWidth != 0 && scaledHeight != 0;
+
+        final Rectangle2D nodeSize = getNodeSize();
+        final double deltaWidth = isScaling ? scaledNodeSize.getWidth() - nodeSize.getWidth() : 0;
+        final double deltaHeight = isScaling ? scaledNodeSize.getHeight() - nodeSize.getHeight() : 0;
+
+        System.out.printf("mirrored:%s\n", mirrored);
+        System.out.println("============");
+
+        counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
+
+        final double finalWidth = mirrored ? getLocalNodeWidth() + deltaWidth * 2 : scaledWidth;
+        final double finalHeight = mirrored ? getLocalNodeHeight() + deltaHeight * 2 : scaledHeight;
+
+        setNodeSize(finalWidth, finalHeight);
     }
 
     final void counterMovement(
