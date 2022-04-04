@@ -594,32 +594,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final double adjustWidth = deltaWidth * (mirrored ? 2 : 1);
         final double adjustHeight = deltaHeight * (mirrored ? 2 : 1);
 
-        // determines if a horizontal or vertical flip should take place
-        final boolean horizontalFlip = isResizeFlippingHorizontal(adjustWidth);
-        final boolean verticalFlip = isResizeFlippingVertical(adjustHeight);
-
-        // if resize leads to any axis flip...
-        if (horizontalFlip || verticalFlip) {
-
-            // gets the size of the resize node
-            final double width = getUnscaledNodeWidth();
-            final double height = getUnscaledNodeHeight();
-
-            // determines the amount of translation needed to counter axis flip movement
-            final double counterWidth = (horizontalFlip ? -width: 0) * (mirrored ? .5 : 1);
-            final double counterHeight = (verticalFlip ? -height : 0) * (mirrored ? .5 : 1);
-
-            // sets the node's with and / or height to 0 depending on which axis is being flipped
-            counterMovement(counterWidth, counterHeight, resizeMode, mirrored);
-            setNodeSize(horizontalFlip ? 0 : width, verticalFlip ? 0 : height);
-
-            // inverts the resize direction to account for the axis flip
-            setResizeDirection(invertDirection(resizeDirection, deltaWidth, deltaHeight));
-
-            // exits the method, next drag event will trigger resize in correct direction
-            // which will lead the node to reach its correct position
-            return;
-        }
+        if (checkForAxisFlip(adjustWidth, adjustHeight, resizeMode, mirrored)) return;
 
         // determines the node's new size
         final double newWidth = getUnscaledNodeWidth() + adjustWidth;
@@ -673,6 +648,42 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         return widthResult < 0;
     }
 
+    private boolean checkForAxisFlip(
+            final double deltaWidth,
+            final double deltaHeight,
+            final ResizeMode resizeMode,
+            final boolean mirrored
+    ) {
+        // determines if a horizontal or vertical flip should take place
+        final boolean horizontalFlip = isResizeFlippingHorizontal(deltaWidth);
+        final boolean verticalFlip = isResizeFlippingVertical(deltaHeight);
+
+        // if resize leads to any axis flip...
+        if (horizontalFlip || verticalFlip) {
+
+            // gets the size of the resize node
+            final double width = getUnscaledNodeWidth();
+            final double height = getUnscaledNodeHeight();
+
+            // determines the amount of translation needed to counter axis flip movement
+            final double counterWidth = (horizontalFlip ? -width: 0) * (mirrored ? .5 : 1);
+            final double counterHeight = (verticalFlip ? -height : 0) * (mirrored ? .5 : 1);
+
+            // sets the node's with and / or height to 0 depending on which axis is being flipped
+            counterMovement(counterWidth, counterHeight, resizeMode, mirrored);
+            setNodeSize(horizontalFlip ? 0 : width, verticalFlip ? 0 : height);
+
+            // inverts the resize direction to account for the axis flip
+            setResizeDirection(invertDirection(resizeDirection, deltaWidth, deltaHeight));
+
+            // axis flip had occurred
+            return true;
+        }
+
+        // axis flip has not occurred
+        return false;
+    }
+
     private boolean isResizeFlippingVertical(final double deltaHeight) {
         // gets the node's current height
         final double nodeHeight = getUnscaledNodeHeight();
@@ -686,10 +697,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private void scaleNode(final Orientation resizeDirection, final ResizeMode resizeMode, final boolean mirrored) {
         // gets the mouse's position relative to the corner opposite to the resize direction
         final Point2D relativeMouseCoordinates = getRelativeMouseCoordinates(resizeDirection, resizeMode);
-        final double mouseX = relativeMouseCoordinates.getX();
-        final double mouseY = relativeMouseCoordinates.getY();
         // determines the mouse's angle relative to the corner opposite to the resize direction
         final double mouseAngle = getRelativeMouseAngle(relativeMouseCoordinates);
+
+        // System.out.printf("mirrored           :%s\n", mirrored);
 
         // checks if it is possible to scale node
         if (!canScale(relativeMouseCoordinates)) return;
@@ -697,19 +708,19 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // determines the size of the node after scaling
         final Rectangle2D scaledNodeSize = getScaledNodeSize(relativeMouseCoordinates, mouseAngle);
 
-        System.out.printf("mouse angle     :%s\n", Math.toDegrees(mouseAngle));
+        /*System.out.printf("mouse angle     :%s\n", Math.toDegrees(mouseAngle));
         System.out.printf("resize direction:%s\n", resizeDirection);
         System.out.printf("relative mouse x:%s\n", relativeMouseCoordinates.getX());
         System.out.printf("relative mouse y:%s\n", relativeMouseCoordinates.getY());
         System.out.printf("scaled node size:%s\n", scaledNodeSize);
         System.out.println("--------------------");
-
+*/
         // checks for an axis flip
         if (isScaleFlipping(relativeMouseCoordinates)) {
-            // sets the node's size to 0 and counters the associated movement
-            counterMovement(-getUnscaledNodeWidth(), -getUnscaledNodeHeight(), resizeMode, false);
-            setNodeSize(0, 0);
-            setResizeDirection(invertScaleDirection(resizeDirection, mouseX, mouseY));
+
+            // System.out.println(">> HERE <<");
+            handleScaleFlip(relativeMouseCoordinates, resizeMode, mirrored);
+
             // exits the method, next drag event will call scale again which will set the node to the correct size
             return;
         }
@@ -721,12 +732,19 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final double deltaWidth = (scaledNodeSize.getWidth() - nodeSize.getWidth());
         final double deltaHeight = (scaledNodeSize.getHeight() - nodeSize.getHeight());
 
-        // counters the node's movement
-        counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
+        // if (checkForAxisFlip(deltaWidth * (mirrored ? 2 : 1), deltaHeight * (mirrored ? 2 : 1), resizeMode, mirrored))
 
         // determines the node's final size in the case where the scaling is mirrored
         final double finalWidth = nodeSize.getWidth() + deltaWidth * (mirrored ? 2 : 1);
         final double finalHeight = nodeSize.getHeight() + deltaHeight * (mirrored ? 2 : 1);
+
+        if (finalWidth < 0 || finalHeight < 0) {
+            handleScaleFlip(relativeMouseCoordinates, resizeMode, mirrored);
+            return;
+        }
+
+        // counters the node's movement
+        counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
 
         // updates the node's size
         setNodeSize(finalWidth, finalHeight);
@@ -734,10 +752,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     private boolean canScale(final Point2D relativeMouseCoordinates) {
         // determines the center of each horizontal and vertical arrow
-        final double leftArrowCenter = getContainerX() - resizePanel.getArrowSpace() - left.getLength() / 2;
-        final double rightArrowCenter = (getContainerX() + resizePanel.getArrowSpace() + right.getLength() / 2) / scale.getX();
-        final double topArrowCenter = getContainerY() - resizePanel.getArrowSpace() - top.getLength() / 2;
-        final double bottomArrowCenter = (getContainerY() + resizePanel.getArrowSpace() + bottom.getLength() / 2) / scale.getY();
+        final double leftArrowCenter = left.getLength() / 2;
+        final double rightArrowCenter = (getContainerX() + getContainerWidth() + resizePanel.getArrowSpace() + right.getLength() / 2) / scale.getX();
+        final double topArrowCenter = top.getLength() / 2;
+        final double bottomArrowCenter = (getContainerY() + getContainerHeight() + resizePanel.getArrowSpace() + bottom.getLength() / 2) / scale.getY();
 
         // gets the mouse's position relative to the resize panel
         final Point2D mousePosition = resizePanel.screenToLocal(ScreenUtil.getMousePosition());
@@ -764,6 +782,14 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         else
             inVerticalLimbo = false;
 
+        /*System.out.printf("resize direction   :%s\n", resizeDirection);
+        System.out.printf("relative mouse x   :%s\n", relativeMouseCoordinates.getX());
+        System.out.printf("mouse x            :%s\n", mouseX);
+        System.out.printf("top arrow center   :%s\n", topArrowCenter);
+        System.out.printf("bottom arrow center:%s\n", bottomArrowCenter);
+        System.out.printf("bottom arrow length:%s\n", bottom.getLength());*/
+        // System.out.printf("test condition:%s\n", relativeMouseCoordinates.getY() + resizePanel.getArrowSpace() + bottom.getLength() / 2);
+        // System.out.println("====================");
         // returns whether it is possible to scale the node
         // (mouse is not in limbo)
         return !inHorizontalLimbo && !inVerticalLimbo;
@@ -777,11 +803,28 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final double arrowSpace = resizePanel.getArrowSpace();
 
         // determines whether a flip should occur along the x-axis or y-axis
-        final boolean xFlip = mouseX + arrowSpace + left.getLength() < 0;
-        final boolean yFlip = mouseY + arrowSpace + top.getLength() < 0;
+        final boolean xFlip = mouseX + arrowSpace + left.getLength() / 2 < 0;
+        final boolean yFlip = mouseY + arrowSpace + top.getLength() / 2 < 0;
 
         // returns whether a flip should occur
         return xFlip || yFlip;
+    }
+
+    private void handleScaleFlip(
+            final Point2D relativeMouseCoordinates,
+            final ResizeMode resizeMode,
+            final boolean mirrored
+    ) {
+        final double mouseX = relativeMouseCoordinates.getX();
+        final double mouseY = relativeMouseCoordinates.getY();
+
+        final double counterWidth = -getUnscaledNodeWidth() * (mirrored ? .5 : 1);
+        final double counterHeight = -getUnscaledNodeHeight() * (mirrored ? .5 : 1);
+
+        // sets the node's size to 0 and counters the associated movement
+        counterMovement(counterWidth, counterHeight, resizeMode, mirrored);
+        setNodeSize(0, 0);
+        setResizeDirection(invertScaleDirection(resizeDirection, mouseX, mouseY));
     }
 
     private void counterMovement(
