@@ -136,7 +136,7 @@ public class HelloApplication extends Application {
         // final int[] slice = test.sliceOf(350);
         // test.displayInConsole(slice);
 
-        stage.setTitle("Color Picker");
+        stage.setTitle("Custom Controls");
         stage.setMinWidth(500);
         stage.setMinHeight(300);
         stage.setScene(scene);

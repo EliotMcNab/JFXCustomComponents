@@ -1,5 +1,7 @@
 package app.customControls.controls.movementPane;
 
+import app.customControls.Animations.SmoothScale;
+import app.customControls.Images;
 import app.customControls.controls.resizePanel.ResizePanel;
 import app.customControls.controls.time.TimedAnimation;
 import app.customControls.utilities.EffectsUtil;
@@ -54,7 +56,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private static final double MOVEMENT_RATIO = 0.01; // ratio of max scroll bar max value used when adding to the scroll bar
     private static final long ZOOM_DURATION = 100;
     private static final long RESET_DURATION = 300;
-    private static final double ZOOM_AMOUNT = 1.05;
+    private static final double ZOOM_AMOUNT = 1.07;
     private static final double MAX_ZOOM = 5.0;
     private static final double MIN_ZOOM = 0.3;
     private static final String CSS_LOCATION = "/app/customControls/style/movement-pane.css";
@@ -87,6 +89,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private final Translate drag;
     private final Scale zoom;
+    private final Scale pickupScale;
     private Point2D lastMousePosition;
     private Point2D lastProgression;
     private double lastHValue;
@@ -97,10 +100,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private final TimedAnimation topCollision;
     private final TimedAnimation bottomCollision;
     private boolean pickup;
-
-    // zooming
-
-    private double scale;
+    private boolean dragging;
+    private boolean panning;
 
     // components
 
@@ -127,7 +128,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private final EventHandler<MouseEvent> mousePressListener;
     private final EventHandler<MouseEvent> mouseReleaseListener;
     private final EventHandler<MouseEvent> dragListener;
-    private final EventHandler<MouseEvent> scrollClickListener;
     private final EventHandler<KeyEvent> keyPressListener;
     private final EventHandler<KeyEvent> keyReleaseListener;
     private final EventHandler<ScrollEvent> scrollListener;
@@ -143,6 +143,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         this.drag = new Translate();
         this.zoom = new Scale();
+        this.pickupScale = new Scale();
 
         // initialises components
 
@@ -166,7 +167,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         this.container = new Pane();
         this.resizePanel = new ResizePanel();
         this.resizePanel.setEffect(NODE_IDLE_SHADOW);
-        this.resizePanel.getTransforms().add(drag);
+        this.resizePanel.getTransforms().addAll(drag, pickupScale);
 
         // initialise properties
 
@@ -176,23 +177,21 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // initialise listeners
 
         this.resizeListener = observable -> resize();
-        this.hValueListener = observable -> handleHValueChange();
-        this.vValueListener = observable -> handleVValueChange();
-        this.nodeChangeListener = observable -> bindNode(movementPane.getAssociatedNode());
+        this.hValueListener = observable -> handleScrollBarUpdate(hScroll);
+        this.vValueListener = observable -> handleScrollBarUpdate(vScroll);
+        this.nodeChangeListener = observable -> bindNode(movementPane.getMovementNode());
         this.collisionListener = observable -> detectCollision();
         this.hCollisionListener = (observableValue, aBoolean, t1) -> horizontalCollision();
         this.vCollisionListener = (observableValue, aBoolean, t1) -> verticalCollision();
         this.mousePressListener = this::handleMousePress;
         this.mouseReleaseListener = this::handleMouseRelease;
         this.dragListener = this::handleDrag;
-        this.scrollClickListener = this::handleSliderClick;
         this.keyPressListener = this::handleKeyPress;
         this.keyReleaseListener = this::handleKeyRelease;
         this.scrollListener = this::handleScroll;
 
         // initialising variables
 
-        this.scale = 1.0;
         this.keyPresses = new HashSet<>();
         this.lastMousePosition = new Point2D(0, 0);
         this.lastProgression = new Point2D(0, 0);
@@ -228,6 +227,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private void style() {
         container.getStyleClass().add("background");
         movementPane.getStyleClass().add("movement-pane");
+        movementPane.setCursor(Cursor.DEFAULT);
+        resizePanel.setCursor(Cursor.DEFAULT);
 
         try {
             String css = MovementPane.class.getResource(CSS_LOCATION).toExternalForm();
@@ -265,6 +266,13 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         movementPane.setOnKeyPressed(keyPressListener);
         movementPane.setOnKeyReleased(keyReleaseListener);
 
+        // resizePanel.setMouseTransparent(true);
+
+        // moving
+        resizePanel.setOnMousePressed(mousePressListener);
+        resizePanel.setOnMouseDragged(dragListener);
+        resizePanel.setOnMouseReleased(mouseReleaseListener);
+
         // zooming
         viewPort.setOnScroll(scrollListener);
 
@@ -273,8 +281,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         verticalCollision.addListener(vCollisionListener);
         resizePanel.boundsInParentProperty().addListener(collisionListener);
 
-        // sliders
-        hScroll.setOnMouseClicked(scrollClickListener);
+        hScroll.setOnMousePressed(mouseEvent -> System.out.println("here"));
     }
 
     // =======================================
@@ -282,26 +289,69 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     // =======================================
 
     private void handleMousePress(final MouseEvent mouseEvent) {
+
+        final Node source = (Node) mouseEvent.getSource();
+
+        if (source.equals(viewPort)) handleViewPortMousePress(mouseEvent);
+        else if (source.equals(resizePanel)) handleResizePanelMousePress(mouseEvent);
+    }
+
+    private void handleViewPortMousePress(final MouseEvent mouseEvent) {
         // determines and saves the current mouse position
         final Point2D mousePosition = new Point2D(mouseEvent.getX(), mouseEvent.getY());
-        lastMousePosition = mousePosition;
+        lastMousePosition = viewPort.localToScreen(mousePosition);
 
         // teleports the node if user it is not being dragged
-        if (!areKeysDown(keyPresses, SPACE)) moveTo(centerOnResizePanel(mousePosition));
+        if (!areKeysDown(keyPresses, SPACE)) {
+            resizePanel.setSelected(false);
+            moveTo(centerOnResizePanel(mousePosition));
+        }
         else pickupNode();
     }
 
+    private void handleResizePanelMousePress(final MouseEvent mouseEvent) {
+        // determines and saves the current mouse position within the resize node
+        lastMousePosition = resizePanel.localToScreen(new Point2D(mouseEvent.getX(), mouseEvent.getY()));
+
+        // updates the cursor's appearance
+        if (resizePanel.isSelected() && resizePanel.getCursor().equals(Cursor.DEFAULT))
+            resizePanel.setCursor(Images.Cursor.MOVE_CURSOR);
+    }
+
     private void handleMouseRelease(final MouseEvent mouseEvent) {
+        final Node source = (Node) mouseEvent.getSource();
+
         dropNode();
         updateProgress();
+        dragging = false;
+        panning = false;
+
+        if (source.equals(resizePanel)) handleResizePanelMouseRelease();
+    }
+
+    private void handleResizePanelMouseRelease() {
+        stopHorizontalCollisions();
+        stopVerticalCollisions();
     }
 
     private void handleDrag(final MouseEvent mouseEvent) {
+
+        final Node source = (Node) mouseEvent.getSource();
+
+        if (source.equals(viewPort)) handleViewportDrag(mouseEvent);
+
+        if (source.equals(resizePanel)) handleResizePanelDrag(mouseEvent);
+    }
+
+    private void handleViewportDrag(final MouseEvent mouseEvent) {
         // checks that the SPACE key is being pressed to allow for drag
         if (!areKeysDown(keyPresses, SPACE)) return;
 
+        // starts dragging
+        panning = true;
+
         // determines the current position of the mouse
-        final Point2D mousePosition = new Point2D(mouseEvent.getX(), mouseEvent.getY());
+        final Point2D mousePosition = viewPort.localToScreen(new Point2D(mouseEvent.getX(), mouseEvent.getY()));
 
         // determines by how much the mouse has moved since last time
         final Point2D dragAmount = mousePosition.subtract(lastMousePosition);
@@ -313,12 +363,43 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         lastMousePosition = mousePosition;
     }
 
+    private void handleResizePanelDrag(final MouseEvent mouseEvent) {
+        // determines whether the resize panel is currently resizing its associated node
+        final boolean isResizing = !resizePanel.getCursor().equals(Images.Cursor.MOVE_CURSOR);
+
+        // if drag event was triggered because resize panel is resizing associated node, exits method
+        if (isResizing) return;
+
+        // starts dragging
+        dragging = true;
+
+        // tries to pick up the associated node
+        // (does not work if node is already picker up)
+        pickupNode();
+
+        // determines the current position of the mouse
+        final Point2D mousePosition = resizePanel.localToScreen(new Point2D(mouseEvent.getX(), mouseEvent.getY()));
+
+        // determines difference in mouse position since last drag
+        final Point2D deltaPosition = mousePosition.subtract(lastMousePosition);
+
+        // applies the drag to the node
+        moveTo(getResizePanelPosition().add(deltaPosition));
+
+        // updates mouse position
+        lastMousePosition = mousePosition;
+    }
+
     private void handleKeyPress(final KeyEvent keyEvent) {
         // if the key is not already pressed, adds it to the currently pressed keys
         saveKeyPress(keyEvent, keyPresses);
 
+        if (areKeysDown(keyPresses, ESC))
+            resizePanel.setSelected(false);
+
         // dragging
-        if (areKeysDown(keyPresses, SPACE)) movementPane.setCursor(Cursor.CLOSED_HAND);
+        if (areKeysDown(keyPresses, SPACE) && movementPane.getCursor().equals(Cursor.DEFAULT))
+            movementPane.setCursor(Cursor.CLOSED_HAND);
 
         // centering
         if (areKeysDown(keyPresses, CTRL, SHIFT, O)) center(true);
@@ -331,13 +412,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // tries to remove the key for the set of pressed keys once it is released
         removeKeyPress(keyEvent, keyPresses);
 
-        // if user stopped dragging node, stops adding space
-        if (keyEvent.getCode().equals(KeyCode.SPACE)) {
-            stopHorizontalCollisions();
-            stopVerticalCollisions();
-            // dropNode();
-            movementPane.setCursor(Cursor.DEFAULT);
-        }
+        // if user stopped dragging node, resets the cursor
+        if (keyEvent.getCode().equals(KeyCode.SPACE)) movementPane.setCursor(Cursor.DEFAULT);
     }
 
     private void handleScroll(final ScrollEvent scrollEvent) {
@@ -360,45 +436,48 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private void moveScrollToClick(ScrollBar scrollBar, MouseEvent mouseEvent) {
         // determines the progression of the mouse along the scroll bar
-        final double scrollProgress = mouseEvent.getX() / scrollBar.getWidth();
+        final double scrollProgress;
+
+        if (scrollBar.equals(hScroll))      scrollProgress = mouseEvent.getX() / scrollBar.getWidth();
+        else if (scrollBar.equals(vScroll)) scrollProgress = mouseEvent.getY() / scrollBar.getHeight();
+        else                                scrollProgress = 0;
+
+        // calculates the value represented by the mouse's position along the scrollbar
         final double mouseValue = scrollProgress * scrollBar.getMax();
 
         // updates the scroll bar to the new value
         scrollBar.setValue(mouseValue);
     }
 
-    private void handleHValueChange() {
-        // makes sure that tne node is not being dragged at the same time
-        if (areKeysDown(keyPresses, SPACE)) return;
+    private void handleScrollBarUpdate(final ScrollBar scrollBar) {
 
-        // determines the current slider value
-        final double currentValue = hScroll.getValue();
+        // if node is being dragged, does not update its position
+        if (dragging || panning) return;
 
-        // calculates the node's new position based on the slider's movement
-        final double deltaX = currentValue - lastHValue;
-        final Point2D target = getResizePanelPosition().subtract(deltaX, 0);
+        // determines the current scroll bar value
+        final double currentValue = scrollBar.getValue();
+
+        // calculates the node's displacement along the x-axis based on the slider's current value
+        final double deltaX;
+        if (scrollBar.equals(hScroll)) {
+            deltaX = currentValue - lastHValue;
+            lastHValue = currentValue;
+        } else {
+            deltaX = 0;
+        }
+
+        // calculates the node's displacement along the y-axis based on the slider's current value
+        final double deltaY;
+        if (scrollBar.equals(vScroll)) {
+            deltaY = currentValue - lastVValue;
+            lastVValue = currentValue;
+        } else {
+            deltaY = 0;
+        }
+
         // moves the node to the target position
+        final Point2D target = getResizePanelPosition().subtract(deltaX, deltaY);
         moveTo(target);
-
-        // updates the slider's last value
-        lastHValue = currentValue;
-    }
-
-    private void handleVValueChange() {
-        // makes sure that tne node is not being dragged at the same time
-        if (areKeysDown(keyPresses, SPACE)) return;
-
-        // determines the current slider value
-        final double currentValue = vScroll.getValue();
-
-        // calculates the node's new position based on the slider's movement
-        final double deltaY = currentValue - lastVValue;
-        final Point2D target = getResizePanelPosition().subtract(0, deltaY);
-        // moves the node to the target position
-        moveTo(target);
-
-        // updates the slider's last value
-        lastVValue = currentValue;
     }
 
     // =======================================
@@ -406,22 +485,25 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     // =======================================
 
     private void pickupNode() {
-        // checks for collisions
-        detectCollision();
-
         // if node has already been picked exits method
         if (pickup) return;
 
-        // picks up the node
-        final ScaleTransition pickupScale = EffectsUtil.generateScaleTransition(
-                ZOOM_DURATION,
-                ZOOM_AMOUNT,
-                ZOOM_AMOUNT,
-                resizePanel
-        );
-        pickupScale.play();
+        // deselects the resize panel
+        resizePanel.setSelected(false);
 
-        scale *= ZOOM_AMOUNT;
+        // checks for collisions
+        detectCollision();
+
+        // generates the node pickup animation
+        final Point2D fromScale = new Point2D(1, 1);
+        final Point2D toScale = new Point2D(ZOOM_AMOUNT, ZOOM_AMOUNT);
+        final Point2D pivot = getNodeCenter();
+        final Duration duration = Duration.millis(ZOOM_DURATION);
+
+        final Animation pickupAnimation = new SmoothScale(pickupScale, fromScale, toScale, pivot, pivot, duration).getAnimation();
+
+        // plays the animation
+        pickupAnimation.play();
 
         // adds a drop shadow effect to signal the node has been picked up
         resizePanel.setEffect(NODE_PICKUP_SHADOW);
@@ -434,23 +516,26 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // if the node has not been picked up, exits the method
         if (!pickup) return;
 
-        // applies the inverse scaling as compared to picking up the node
-        final ScaleTransition dropScale = EffectsUtil.generateScaleTransition(
-                ZOOM_DURATION,
-                1,
-                1,
-                resizePanel
-        );
-        dropScale.play();
+        // selects the resize panel again
+        resizePanel.setSelected(true);
+
+        // generates the node dropping animation
+        final Point2D toScale = new Point2D(1, 1);
+        final Point2D toPivot = getNodeCenter();
+        final Duration duration = Duration.millis(ZOOM_DURATION);
+
+        final Animation pickupAnimation = new SmoothScale(
+                pickupScale,
+                toScale,
+                toPivot,
+                duration
+        ).getAnimation();
+
+        // plays the animation
+        pickupAnimation.play();
 
         // resets the node's drop shadow
         resizePanel.setEffect(NODE_IDLE_SHADOW);
-
-        // resets the node's scales
-        resizePanel.setScaleX(1);
-        resizePanel.setScaleY(1);
-
-        scale /= ZOOM_AMOUNT;
 
         // resets the node's pickup status
         pickup = false;
@@ -498,42 +583,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         updateProgress();
     }
 
-    private Point2D boundNodeMovement(final Point2D target) {
-        // determines the current position of the node
-        final Point2D nodePosition = getNodePosition();
-
-        // determines the size of the displays
-        final double availableWidth = viewPort.getWidth();
-        final double availableHeight = viewPort.getHeight();
-        // determines the size of the node
-        final double nodeWidth = getNodeWidth();
-        final double nodeHeight = getNodeHeight();
-
-        // determines the node's final position
-        final Point2D finalPosition = nodePosition.add(target);
-
-        // determines if the node will overlap viewport once it has moved
-        final boolean overlapLeft = finalPosition.getX() < 0;
-        final boolean overlapRight = finalPosition.getX() > availableWidth - nodeWidth;
-        final boolean overlapTop = finalPosition.getY() < 0;
-        final boolean overlapBottom = finalPosition.getY() > availableHeight - nodeHeight;
-
-        final double deltaX;
-        final double deltaY;
-
-        // determines by how much to move the node to avoid overlap if there is any
-             if (overlapLeft)   deltaX = -nodePosition.getX();
-        else if (overlapRight)  deltaX = availableWidth - nodePosition.getX() - nodeWidth;
-        else                    deltaX = target.getX();
-
-             if (overlapTop)    deltaY = -nodePosition.getY();
-        else if (overlapBottom) deltaY = availableHeight - nodePosition.getY() - nodeHeight;
-        else                    deltaY = target.getY();
-
-        // returns transition after having taken care of overlap
-        return new Point2D(deltaX, deltaY);
-    }
-
     private void updateProgress() {
         // determines the size of the display
         final double width = movementPane.getWidth();
@@ -576,8 +625,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         final boolean zoomOut = scrollEvent.getDeltaY() < 0;
         final boolean noZoom = !zoomIn && !zoomOut;
         // determines if user has reached zoom limits
-        final boolean maxZoomReached = scale >= MAX_ZOOM;
-        final boolean minZoomReached = scale <= MIN_ZOOM;
+        final boolean maxZoomReached = zoom.getX() >= MAX_ZOOM;
+        final boolean minZoomReached = zoom.getX() <= MIN_ZOOM;
 
         // exits method if no zoom is being applied or if scrolling would overstep zoom limits
         if (noZoom || (zoomIn && maxZoomReached) || (zoomOut && minZoomReached)) return;
@@ -592,25 +641,18 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         if (zoomIn) scaleY = ZOOM_AMOUNT;
         else scaleY = 1 / ZOOM_AMOUNT;
 
-        // saves the node's new scale
-        scale *= scaleX;
-
         // gets the mouse's position & the zoom to apply
-        final Point2D mousePosition = new Point2D(scrollEvent.getX(), scrollEvent.getY());
         final Point2D zoomAmount = new Point2D(scaleX, scaleY);
 
         // applies the zoom to the node
-        zoomTo(mousePosition, zoomAmount);
+        zoomTo(zoomAmount);
     }
 
-    private void zoomTo(final Point2D target, final Point2D zoomAmount) {
-        // gets the target's position relative to the associated node
-        /*final Node associatedNode = movementPane.getAssociatedNode();
-        final Point2D localPosition = associatedNode.parentToLocal(target);*/
+    private void zoomTo(final Point2D zoomAmount) {
 
-        final Node associatedNode = movementPane.getAssociatedNode();
+        // gets the mouse's position relative to the associated node
+        final Node associatedNode = movementPane.getMovementNode();
         final Point2D localPosition = associatedNode.screenToLocal(ScreenUtil.getMousePosition());
-        // final Point2D localPosition = resizePanel.parentToLocal(target);
 
         // creates the zoom transformation
         final Scale newZoom = new Scale();
@@ -629,14 +671,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         zoom.setPivotX(totalZoom.getPivotX());
         zoom.setPivotY(totalZoom.getPivotY());
 
-        /*System.out.printf("total zoom:%s\n", totalZoom);
-        System.out.printf("zoom:%s\n", zoom);
-
-        System.out.println("===============");*/
-
-        // saves the current zoom
-        scale = totalZoom.getX();
-
+        // applies zoom to the resize panel
         resizePanel.setZoom(totalZoom.getX(), totalZoom.getY(), totalZoom.getPivotX(), totalZoom.getPivotY());
     }
 
@@ -648,14 +683,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // pivot must be node center (unscaled) + dopShadow radius
         // this produces a slight teleportation effect when pivot is changed, but it is hard to pickup in motion
 
-        // determines the node's current shadow
-        // (this should normally always be the idle shadow since node is dropped before reset,
-        // but still useful if this method is called outside of rest method)
-        /*final DropShadow currentShadow = pickup ? NODE_PICKUP_SHADOW : NODE_IDLE_SHADOW;*/
-
         // determines the necessary pivot for centering the node
-        /*final double pivotX = (getUnscaledNodeWidth() - currentShadow.getRadius() * 2);
-        final double pivotY = (getUnscaledNodeHeight() - currentShadow.getRadius() * 2);*/
         final double pivotX = getUnscaledNodeWidth() / 2;
         final double pivotY = getUnscaledNodeHeight() / 2;
 
@@ -709,10 +737,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                         )
                 )
         );
-        // resets the scale once the node has finished shrinking
-        shrink.setOnFinished(actionEvent -> {
-            scale = 1;
-        });
         return shrink;
     }
 
@@ -783,6 +807,9 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     // =======================================
 
     private void detectCollision() {
+
+        // does noe check for collisions if user is panning
+
         // gets the node's current position
         final Point2D resizePanelPosition = getResizePanelPosition();
 
@@ -812,8 +839,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private void horizontalCollision() {
 
-        // does not consider collision if node is not being dragged
-        if (!areKeysDown(keyPresses, SPACE)) return;
+        // does not check for collisions if user in not dragging node
+        if (!dragging) return;
 
         // determines if the collision is to the left or the right
         final boolean isLeft = getResizePanelX() <= 0;
@@ -826,8 +853,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private void verticalCollision() {
 
-        // does not consider collision if node is not being dragged
-        if (!areKeysDown(keyPresses, SPACE)) return;
+        // does not check for collisions if user in not dragging node
+        if (!dragging) return;
 
         // determines if the collision is to the top or the bottom
         final boolean isTop = getResizePanelY() <= 0;
@@ -890,16 +917,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         horizontalCollision.set(collision);
     }
 
-    private boolean getHorizontalCollision() {
-        return horizontalCollision.get();
-    }
-
     private void setVerticalCollision(final boolean collision) {
         verticalCollision.set(collision);
-    }
-
-    private boolean getVerticalCollision() {
-        return verticalCollision.get();
     }
 
     // =======================================
@@ -928,7 +947,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         viewPort.setPrefHeight(vScrollLength);
 
         // determines the new position of the node
-        if (movementPane.getAssociatedNode() != null) {
+        if (movementPane.getMovementNode() != null) {
             final double adjustX = lastProgression.getX() * width;
             final double adjustY = lastProgression.getY() * height;
             final Point2D target = new Point2D(adjustX, adjustY);
@@ -972,21 +991,13 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     }
 
     private Rectangle2D getNodeSize() {
-        final Node associatedNode = movementPane.getAssociatedNode();
+        final Node associatedNode = movementPane.getMovementNode();
 
         // checks that the associated node is not null
         if (associatedNode == null) return new Rectangle2D(0, 0, 0, 0);
 
         final Bounds bounds = associatedNode.getBoundsInParent();
         return new Rectangle2D(0, 0, bounds.getWidth(), bounds.getHeight());
-    }
-
-    private double getNodeHeight() {
-        return getNodeSize().getHeight();
-    }
-
-    private double getNodeWidth() {
-        return getNodeSize().getWidth();
     }
 
     private Rectangle2D getResizePanelSize() {
@@ -1004,7 +1015,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private Rectangle2D getUnscaledNodeSize() {
         final Rectangle2D nodeSize = getNodeSize();
-        return new Rectangle2D(0, 0, nodeSize.getWidth() / scale, nodeSize.getHeight() / scale);
+        return new Rectangle2D(0, 0, nodeSize.getWidth() / zoom.getX(), nodeSize.getHeight() / zoom.getY());
     }
 
     private double getUnscaledNodeWidth() {
@@ -1013,24 +1024,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private double getUnscaledNodeHeight() {
         return getUnscaledNodeSize().getHeight();
-    }
-
-    private Point2D getNodePosition() {
-        final Node associatedNode = movementPane.getAssociatedNode();
-
-        // checks that the associated node is not null
-        if (associatedNode == null) return new Point2D(0, 0);
-
-        final Bounds bounds = associatedNode.getBoundsInParent();
-        return new Point2D(bounds.getMinX(), bounds.getMinY());
-    }
-
-    private double getNodeX() {
-        return getNodePosition().getX();
-    }
-
-    private double getNodeY() {
-        return getNodePosition().getY();
     }
 
     private Point2D getResizePanelPosition() {
@@ -1046,33 +1039,22 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         return getResizePanelPosition().getY();
     }
 
-    private Point2D centerOnNode(final Point2D target) {
-        final Node associatedNode = movementPane.getAssociatedNode();
-
-        // checks that the associated node is not null
-        if (associatedNode == null) return target;
-
-        final Point2D nodeCenter = getNodeCenter();
-        final double adjustedX = target.getX() - nodeCenter.getX();
-        final double adjustedY = target.getY() - nodeCenter.getY();
-        return new Point2D(adjustedX, adjustedY);
-    }
-
-    private Point2D getNodeCenter() {
-        final Node associatedNode = movementPane.getAssociatedNode();
-
-        // checks that the associated node is not null
-        if (associatedNode == null) return new Point2D(0, 0);
-
-        return new Point2D(getNodeWidth() / 2, getNodeHeight() / 2);
-    }
-
     private Point2D centerOnResizePanel(final Point2D target) {
         return target.subtract(getResizePanelCenter());
     }
 
     private Point2D getResizePanelCenter() {
         return new Point2D(getResizePanelWidth() / 2, getResizePanelHeight() / 2);
+    }
+
+    private Point2D getUnscaledResizePanelCenter() {
+        return getResizePanelCenter().multiply(1 / zoom.getX());
+    }
+
+    private Point2D getNodeCenter() {
+        final Node associatedNode = movementPane.getMovementNode();
+        final Bounds bounds = associatedNode.getBoundsInParent();
+        return new Point2D(bounds.getWidth() / 2, bounds.getHeight() / 2);
     }
 
     private Point2D getViewPortCenter() {
@@ -1084,20 +1066,8 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         return new Point2D(width / 2, height / 2);
     }
 
-    private Point2D getNodeCenterInViewPort() {
-        return getViewPortCenter().subtract(getNodeCenter());
-    }
-
     private Point2D getResizeCenterInViewPort() {
         return getViewPortCenter().subtract(getResizePanelCenter());
-    }
-
-    private Point2D getUnscaledNodeCenter() {
-        return getNodeCenter().multiply(1 / scale);
-    }
-
-    private Point2D getUnscaledNodeCenterInViewPort() {
-        return getViewPortCenter().subtract(getUnscaledNodeCenter());
     }
 
 }

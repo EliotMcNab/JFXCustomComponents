@@ -259,7 +259,7 @@ public class ResizePanel extends Control {
         return arrowColor.get();
     }
 
-    public boolean getSelected() {
+    public boolean isSelected() {
         return selected.get();
     }
 

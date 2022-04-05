@@ -234,12 +234,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // mouse listeners
 
-        resizePanel.setOnMouseDragged(dragListener);
-        resizePanel.setOnMouseReleased(mouseReleaseListener);
+        contentPane.setOnMouseDragged(dragListener);
+        contentPane.setOnMouseReleased(mouseReleaseListener);
 
         // key listeners
-
-        resizePanel.setOnKeyPressed(keyPressListener);
 
         // arrow listeners
 
@@ -379,12 +377,12 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     private void handleNodePress(final MouseEvent mouseEvent) {
         // updates the resize panel's selection property when it is pressed
-        resizePanel.setSelected(!resizePanel.getSelected());
+        resizePanel.setSelected(true);
     }
 
     private void handleSelection(final Observable observable) {
         // update the arrow's visibility when resize panel's selection property changes
-        setArrowsVisible(resizePanel.getSelected());
+        setArrowsVisible(resizePanel.isSelected());
     }
 
      private void setArrowsVisible(final boolean isVisible) {
