@@ -432,8 +432,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     private void setResizeDirection(final Orientation newResizeDirection) {
-        System.out.printf("new resize direction:%s\n", newResizeDirection);
-        System.out.println("====================");
         // deselects the current arrow
         deselectArrow(resizeDirection);
         // updates the resize direction
@@ -479,6 +477,8 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
                 || direction.equals(BOTTOM_RIGHT)
                 || direction.equals(BOTTOM_LEFT);
 
+        // aborts resizing if resize direction is invalid for scaling
+        // (LEFT, RIGHT, TOP or BOTTOM don't work with scaling)
         if (scaled && !isDiagonalDrag) return;
 
         // determines the difference in width and height and the resize mode based on resize direction
@@ -556,46 +556,9 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     private Orientation invertScaleDirection(
             final Orientation resizeDirection,
-            /*final double mouseX,
-            final double mouseY*/
             final double nodeAngle,
             final double mouseAngle
     ) {
-
-        /*System.out.printf("resize direction    :%s\n", resizeDirection);
-        System.out.printf("mouse x             :%s\n", mouseX);
-        System.out.printf("mouse y             :%s\n", mouseY);
-        System.out.printf("mouse position delta:%s\n", mousePosition.subtract(lastMousePosition));
-
-        return switch (resizeDirection) {
-            case TOP_LEFT -> {
-                if (mouseX < 0)          yield TOP_RIGHT;
-                else if (mouseY < 0)     yield BOTTOM_LEFT;
-                else                     yield BOTTOM_RIGHT;
-            }
-            case TOP_RIGHT -> {
-                if (mouseX < 0)          yield TOP_LEFT;
-                else if (mouseY < 0)     yield BOTTOM_RIGHT;
-                else                     yield BOTTOM_LEFT;
-            }
-            case BOTTOM_RIGHT -> {
-                if (mouseX < 0 && mouseY < 0) yield TOP_LEFT;
-                else if (mouseX < 0)          yield BOTTOM_LEFT;
-                else                          yield TOP_RIGHT;
-            }
-            case BOTTOM_LEFT -> {
-                if (mouseX < 0 && mouseY < 0) yield TOP_RIGHT;
-                else if (mouseX < 0)          yield BOTTOM_RIGHT;
-                else                          yield TOP_LEFT;
-            }
-            default -> throw new IllegalArgumentException(
-                    resizeDirection + "is not a valid scale direction, only diagonal directions are accepted");
-        };*/
-
-        System.out.printf("mouse angle:%s\n", Math.toDegrees(mouseAngle));
-        System.out.printf("node angle :%s\n", Math.toDegrees(nodeAngle));
-        System.out.println("===============");
-
         return switch (resizeDirection) {
             case TOP_LEFT -> {
                 if (mouseAngle > nodeAngle) yield BOTTOM_LEFT;
@@ -827,17 +790,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         else
             inVerticalLimbo = false;
 
-        /*System.out.printf("resize direction   :%s\n", resizeDirection);
-        System.out.printf("right arrow center :%s\n", rightArrowCenter);
-        System.out.printf("bottom arrow center:%s\n", bottomArrowCenter);
-        System.out.printf("mouse x            :%s\n", mouseX);
-        System.out.printf("mouse y            :%s\n", mouseY);
-        System.out.printf("relative mouse x   :%s\n", relativeMouseCoordinates.getX());
-        System.out.printf("relative mouse y   :%s\n", relativeMouseCoordinates.getY());
-        System.out.printf("in horizontal limbo:%s\n", inHorizontalLimbo);
-        System.out.printf("in vertical limbo  :%s\n", inVerticalLimbo);
-        System.out.println("====================");*/
-
         // returns whether it is possible to scale the node
         // (mouse is not in limbo)
         return !inHorizontalLimbo && !inVerticalLimbo;
@@ -858,17 +810,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // determines whether a flip should occur along the x-axis or y-axis
         final boolean xFlip = xMinusFlip || xPlusFlip;
         final boolean yFlip = yMinusFlip || yPlusFlip;
-
-        /*System.out.printf("resize direction    :%s\n", resizeDirection);
-        System.out.printf("mouse x             :%s\n", mouseX);
-        System.out.printf("mouse y             :%s\n", mouseY);
-        System.out.printf("x + flip coordinates:%s\n", xPlusFlip);
-        System.out.printf("x - flip coordinates:%s\n", xMinusFlip);
-        System.out.printf("y + flip coordinates:%s\n", yPlusFlip);
-        System.out.printf("y - flip coordinates:%s\n", yMinusFlip);
-        System.out.printf("x flip              :%s\n", xFlip);
-        System.out.printf("y flip              :%s\n", yFlip);
-        System.out.println("==========");*/
 
         // returns whether a flip should occur
         return xFlip || yFlip;
@@ -931,6 +872,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
             final  Point2D relativeMouseCoordinates,
             final double mouseAngle
     ) {
+        // gets the mouse's coordinates
         final double mouseX = relativeMouseCoordinates.getX();
         final double mouseY = relativeMouseCoordinates.getY();
 
@@ -969,7 +911,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
      * @return (Point2D): the mouse's position relative to the corner opposite to the resize direction
      */
     private Point2D getRelativeMouseCoordinates(final Orientation resizeDirection, final ResizeMode resizeMode) {
-
         // gets the mouse position relative to the screen
         final Point2D mouseScreenPosition = ScreenUtil.getMousePosition();
 
@@ -1002,13 +943,16 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     private double getRelativeMouseAngle(final Point2D relativeMouseCoordinates) {
-
+        // gets the mouse's coordinates
         final double mouseX = relativeMouseCoordinates.getX();
         final double mouseY = relativeMouseCoordinates.getY();
+        // determines if the mouse is above the node (using relative mouse coordinates here)
         final boolean mouseAboveNode = mouseY < 0;
 
+        // calculates the mouse's angle
         final double mouseAngle = Math.atan(mouseX / mouseY);
 
+        // calculates the node's angle, adjusting it when necessary
         return Double.isNaN(mouseAngle) ? 0 : mouseAboveNode ? Math.PI + mouseAngle : mouseAngle;
     }
 
@@ -1046,7 +990,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     private void zoom(final Scale newScale) {
-
         // resets the resize node's layoutX and layoutY values, so they do not interfere with Transforms
         final Node resizeNode = resizePanel.getResizeNode();
         resizeNode.setLayoutX(0);
@@ -1152,6 +1095,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // =====================================
 
     private Point2D getResizeArrowPosition(final Orientation resizeDirection) {
+        // gets the resize arrow's center based on the current resize direction
         return switch (resizeDirection) {
             case TOP_LEFT     -> getArrowCenter(topLeft);
             case TOP          -> getArrowCenter(top);
@@ -1166,11 +1110,14 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     private Point2D getArrowCenter(final Arrow arrow) {
+        // gets the arrow's size
         final Bounds arrowBounds = arrow.getBoundsInParent();
         final double width = arrowBounds.getWidth();
         final double height = arrowBounds.getHeight();
+        // gets the arrow's position
         final double arrowX = arrowBounds.getMinX();
         final double arrowY = arrowBounds.getMinY();
+        // returns the coordinates to the arrow's center
         return new Point2D(arrowX + width / 2, arrowY + height / 2);
     }
 
@@ -1237,9 +1184,4 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private double getContainerY() {
         return getContainerPosition().getY();
     }
-
-    // =====================================
-    //             VALIDATION
-    // =====================================
-
 }
