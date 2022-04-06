@@ -2,7 +2,7 @@ package app.customControls.controls.resizePanel;
 
 import app.customControls.controls.shapes.Arrow;
 import app.customControls.controls.shapes.Orientation;
-import app.customControls.utilities.KeyboardUtil;
+import app.customControls.handlers.delay.DelayHandler;
 import app.customControls.utilities.ScreenUtil;
 import app.customControls.utilities.TransformUtil;
 import javafx.application.Platform;
@@ -19,7 +19,6 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -29,7 +28,6 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
 import static app.customControls.controls.shapes.Orientation.*;
-import static app.customControls.utilities.KeyboardUtil.Letter.*;
 
 public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<ResizePanel> {
 
@@ -40,6 +38,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // constants
 
     private static final String CSS_LOCATION = "/app/customControls/style/size-panel.css";
+    private static final int MOVEMENT_DELAY = 10;
 
     private enum ResizeMode {
         NORMAL,
@@ -74,6 +73,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private boolean onArrow;
     private boolean wasScaling;
     private double nodeAngle;
+    private final DelayHandler movementDelay;
 
     // transforms
 
@@ -95,7 +95,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private final EventHandler<MouseEvent> resizeDirectionListener;
     private final EventHandler<MouseEvent> dragListener;
     private final EventHandler<MouseEvent> mouseReleaseListener;
-    private final EventHandler<KeyEvent> keyPressListener;
     private final ChangeListener<Boolean> zoomListener;
 
     // =====================================
@@ -134,6 +133,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // initialising variables
 
+        this.movementDelay = new DelayHandler(MOVEMENT_DELAY);
         this.resizeDirection = Orientation.NULL;
         this.translate = new Translate();
         this.adjustTranslate = new Translate();
@@ -156,7 +156,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.resizeDirectionListener = this::updateResizeDirection;
         this.dragListener = this::handleDrag;
         this.mouseReleaseListener = this::handleMouseRelease;
-        this.keyPressListener = this::handleKeyPress;
         this.zoomListener = this::updateZoom;
 
         // initialisation
@@ -372,7 +371,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     }
 
     // =====================================
-    //             ACTIVATION
+    //             SELECTION
     // =====================================
 
     private void handleNodePress(final MouseEvent mouseEvent) {
@@ -392,11 +391,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         }
     }
 
-    private void handleKeyPress(final KeyEvent keyEvent) {
-        // deselects the resize panel if user presses ESC key
-        if (KeyboardUtil.areKeysDown(keyEvent, ESC)) resizePanel.setSelected(false);
-    }
-
     // =====================================
     //              RESIZING
     // =====================================
@@ -405,8 +399,13 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // if the mouse is not on an arrow aborts drag
         if (!onArrow) return;
 
+        // small delay to make sure that transformations have the time to be applied before the next mouseEvent is fired
+        // (results in incorrect resize arrow position otherwise, fuck JFX)
+        if (!movementDelay.hasElapsed()) return;
+
         // gets the mouse position
-        final Point2D mousePosition = new Point2D(mouseEvent.getX(), mouseEvent.getY());
+        // final Point2D mousePosition = new Point2D(mouseEvent.getX(), mouseEvent.getY());
+        final Point2D mousePosition = ScreenUtil.getMousePosition();
         // determines the path from the resize arrow to the mouse
         final Point2D deltaMovement = mousePosition.subtract(getResizeArrowPosition(resizeDirection));
         // adapts displacement to current node scale
@@ -416,11 +415,13 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final boolean isMirrored = mouseEvent.isShiftDown();
         final boolean isScaled = mouseEvent.isControlDown();
 
+        // gets the node angle whenever the node starts scaling
         if (isScaled && !wasScaling) {
             nodeAngle = getNodeAngle();
             wasScaling = true;
         }
 
+        // stops scaling the node when CTRl key is no longer pressed
         if (!isScaled && wasScaling) {
             wasScaling = false;
         }
@@ -1116,7 +1117,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         final double arrowX = arrowBounds.getMinX();
         final double arrowY = arrowBounds.getMinY();
         // returns the coordinates to the arrow's center
-        return new Point2D(arrowX + width / 2, arrowY + height / 2);
+        return contentPane.localToScreen(new Point2D(arrowX + width / 2, arrowY + height / 2));
     }
 
     private Rectangle2D getNodeSize() {
