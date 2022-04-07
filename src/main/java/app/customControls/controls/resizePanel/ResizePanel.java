@@ -330,11 +330,11 @@ public class ResizePanel extends Control {
     // =====================================
 
     private boolean validateArrowWidth(final double newWidth) {
-        return newWidth > 0 && newWidth > getArrowThickness() * 2;
+        return newWidth > 0;
     }
 
     private boolean validateArrowHeight(final double newHeight) {
-        return newHeight > 0 && newHeight * 2 < getArrowLength();
+        return newHeight > 0;
     }
 
     private boolean validateArrowSpace(final double newArrowSpace) {

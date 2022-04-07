@@ -87,6 +87,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
     private final ChangeListener<Node> associatedNodeListener;
     private final InvalidationListener arrowSpaceListener;
+    private final ChangeListener<Number> arrowLengthListener;
     private final InvalidationListener colorChangeListener;
     private final InvalidationListener sizeListener;
     private final ChangeListener<Border> borderListener;
@@ -148,6 +149,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         this.associatedNodeListener = this::updateAssociatedNode;
         this.arrowSpaceListener = observable -> updateSize();
+        this.arrowLengthListener = this::updateArrowLength;
         this.colorChangeListener = this::updateArrowColor;
         this.sizeListener = observable -> updateSize();
         this.borderListener = this::handleBorderChange;
@@ -222,6 +224,17 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         resizePanel.getResizeNode().setOnMousePressed(nodePressListener);
         resizePanel.selectedProperty().addListener(selectedListener);
 
+        // arrow property listeners
+
+        topLeft    .widthProperty().addListener(arrowLengthListener);
+        top        .widthProperty().addListener(arrowLengthListener);
+        topRight   .widthProperty().addListener(arrowLengthListener);
+        right      .widthProperty().addListener(arrowLengthListener);
+        bottomRight.widthProperty().addListener(arrowLengthListener);
+        bottom     .widthProperty().addListener(arrowLengthListener);
+        bottomLeft .widthProperty().addListener(arrowLengthListener);
+        left       .widthProperty().addListener(arrowLengthListener);
+
         // zooming
 
         resizePanel.zoomUpdateProperty().addListener(zoomListener);
@@ -274,6 +287,10 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // resizes and repositions the nodes
         resize();
         reposition();
+    }
+
+    private void updateArrowLength(ObservableValue<? extends Number> value, Number oldValue, Number newValue) {
+        resizePanel.setArrowLength(newValue.doubleValue());
     }
 
     private void updateArrowColor(final Observable observable) {
