@@ -928,10 +928,16 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         final double pivotY = centerPivotYInterpolation.interpolateAt(now);
         final double dragX = centerXInterpolation.interpolateAt(now);
         final double dragY = centerYInterpolation.interpolateAt(now);
+        final double resizeX = resizeTranslateXInterpolation.interpolateAt(now);
+        final double resizeY = resizeTranslateYInterpolation.interpolateAt(now);
 
         resizePanel.setZoom(zoom.getX(), zoom.getY(), pivotX, pivotY);
         drag.setX(dragX);
         drag.setY(dragY);
+
+        final Translate resizeTranslate = resizePanel.translateProperty().get();
+        resizeTranslate.setX(resizeX);
+        resizeTranslate.setY(resizeY);
     }
 
     private void handleResetEnd(final ActionEvent actionEvent) {
