@@ -95,7 +95,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private final Scale zoom;
     private final Scale pickupScale;
     private Point2D lastMousePosition;
-    private Point2D lastProgression;
+    private Point2D lastProgress;
     private double lastHValue;
     private double lastVValue;
     private final HashSet<KeyboardUtil.Key> keyPresses;
@@ -219,7 +219,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         this.keyPresses = new HashSet<>();
         this.lastMousePosition = new Point2D(0, 0);
-        this.lastProgression = new Point2D(0, 0);
+        this.lastProgress = new Point2D(0, 0);
         this.lastHValue = hScroll.getValue();
         this.lastVValue = vScroll.getValue();
 
@@ -344,8 +344,10 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     private void handleMouseRelease(final MouseEvent mouseEvent) {
         final Node source = (Node) mouseEvent.getSource();
 
-        dropNode();
+        // updates the node's progress
         updateProgress();
+
+        dropNode();
         dragging = false;
         panning = false;
 
@@ -577,10 +579,14 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     }
 
     private void handleResetEnd(ActionEvent actionEvent) {
+        // TODO: add commenting here
+
+        final Rectangle2D nodeSize = getUnscaledNodeSize();
+
         zoom.setX(1);
         zoom.setY(1);
-        zoom.setPivotX(getUnscaledNodeWidth() / 2);
-        zoom.setPivotY(getUnscaledNodeHeight() / 2);
+        zoom.setPivotX(nodeSize.getWidth() / 2);
+        zoom.setPivotY(nodeSize.getHeight() / 2);
 
         final Point2D resizePanelCenter = getUnscaledResizeCenterInViewPort();
         drag.setX(resizePanelCenter.getX());
@@ -597,11 +603,13 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
             final Animation scrollBarCentering = animateScrollBarCentering(RESET_DURATION);
             final Animation center = new ParallelTransition(scrollBarCentering, resizePanelCentering);
             center.play();
+            center.setOnFinished(actionEvent -> updateProgress());
         }
         else {
             hScroll.setValue(hScroll.getMax() / 2);
             vScroll.setValue(vScroll.getMax() / 2);
-            moveTo(getResizeCenterInViewPort());
+
+            moveTo(getResizeCenterInViewPort().subtract(15, 15));
         }
     }
 
@@ -614,23 +622,36 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         drag.setX(drag.getX() + pathTo.getX());
         drag.setY(drag.getY() + pathTo.getY());
 
-        // saves the node's progress
-        updateProgress();
-
         /*updateInterpolation(INTERPOLATION_MODE.DRAG_X_INTERPOLATION);
         updateInterpolation(INTERPOLATION_MODE.DRAG_Y_INTERPOLATION);*/
+
+        // updates the node's progress
+        updateProgress();
     }
 
     private void updateProgress() {
-        // determines the size of the display
-        final double width = movementPane.getWidth();
-        final double height = movementPane.getHeight();
-        // determines the progression of the node
-        final Point2D nodePosition = getResizePanelPosition().add(getResizePanelCenter());
-        final double xProgress = nodePosition.getX() / width;
-        final double yProgress = nodePosition.getY() / height;
-        // saves the node's current progression
-        lastProgression = new Point2D(xProgress, yProgress);
+        // TODO: add commenting here
+
+        final Bounds viewBounds = viewPort.getBoundsInParent();
+        final double viewWidth = viewBounds.getWidth();
+        final double viewHeight = viewBounds.getHeight();
+
+        final Point2D resizeCenter = getResizePanelPosition().add(getResizePanelCenter()).add(15, 15);
+
+        final double xProgress = resizeCenter.getX() / viewWidth;
+        final double yProgress = resizeCenter.getY() / viewHeight;
+
+        lastProgress = new Point2D(
+                xProgress,
+                yProgress
+        );
+
+        /*System.out.printf("resize panel center:%s\n", resizeCenter);
+        System.out.printf("view port width    :%s\n", viewWidth);
+        System.out.printf("view port height   :%s\n", viewHeight);
+        System.out.printf("x progress         :%s\n", xProgress);
+        System.out.printf("y progress         :%s\n", yProgress);
+        System.out.println("=======================");*/
     }
 
     private void horizontalScroll(ScrollEvent scrollEvent) {
@@ -716,6 +737,9 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         /*updateInterpolation(INTERPOLATION_MODE.SCALE_INTERPOLATION);
         updateInterpolation(INTERPOLATION_MODE.PIVOT_X_INTERPOLATION);
         updateInterpolation(INTERPOLATION_MODE.PIVOT_Y_INTERPOLATION);*/
+
+        // updates the node's progress
+        updateProgress();
     }
 
     // =======================================
@@ -736,6 +760,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         double max;
         double tMax;
 
+        final Rectangle2D nodeSize = getUnscaledNodeSize();
         final Point2D center = getUnscaledResizeCenterInViewPort();
 
         if (mode.equals(INTERPOLATION_MODE.SCALE_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)) {
@@ -752,7 +777,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         }
 
         if (mode.equals(INTERPOLATION_MODE.PIVOT_X_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)) {
-            min = getUnscaledNodeWidth() / 2;
+            min = nodeSize.getWidth() / 2;
             max = zoom.getPivotX();
             tMax = RESET_DURATION;
 
@@ -765,7 +790,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         }
 
         if (mode.equals(INTERPOLATION_MODE.PIVOT_Y_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)){
-            min = getUnscaledNodeHeight() / 2;
+            min = nodeSize.getHeight() / 2;
             max = zoom.getPivotY();
             tMax = RESET_DURATION;
 
@@ -850,7 +875,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                 )
         );
         // updates the node's progress once the animation is over
-        centerAnimation.setOnFinished(actionEvent -> updateProgress());
         return centerAnimation;
     }
 
@@ -922,9 +946,12 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // does not check for collisions if user in not dragging node
         if (!dragging) return;
 
+        // gets the position of the resize panel
+        final Point2D resizePosition = getResizePanelPosition();
+
         // determines if the collision is to the left or the right
-        final boolean isLeft = getResizePanelX() <= 0;
-        final boolean isRight = getResizePanelX() >= viewPort.getWidth() - getResizePanelWidth();
+        final boolean isLeft = resizePosition.getX() <= 0;
+        final boolean isRight = resizePosition.getX() >= viewPort.getWidth() - getResizePanelWidth();
 
         if      (isLeft) leftCollision.start();
         else if (isRight) rightCollision.start();
@@ -936,9 +963,12 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // does not check for collisions if user in not dragging node
         if (!dragging) return;
 
+        // gets the position of the resize panel
+        final Point2D resizePosition = getResizePanelPosition();
+
         // determines if the collision is to the top or the bottom
-        final boolean isTop = getResizePanelY() <= 0;
-        final boolean isBottom = getResizePanelY() >= viewPort.getHeight() - getResizePanelHeight() - 1;
+        final boolean isTop = resizePosition.getY() <= 0;
+        final boolean isBottom = resizePosition.getY() >= viewPort.getHeight() - getResizePanelHeight() - 1;
 
         if      (isTop) topCollision.start();
         else if (isBottom) bottomCollision.start();
@@ -1028,10 +1058,26 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         // determines the new position of the node
         if (movementPane.getMovementNode() != null) {
-            final double adjustX = lastProgression.getX() * width;
-            final double adjustY = lastProgression.getY() * height;
-            final Point2D target = new Point2D(adjustX, adjustY);
-            moveTo(target.subtract(getResizePanelCenter()));
+            Platform.runLater(() -> {
+                final Bounds viewBounds = viewPort.getBoundsInParent();
+                final double xPosition = lastProgress.getX() * viewBounds.getWidth();
+                final double yPosition = lastProgress.getY() * viewBounds.getHeight();
+
+                final Point2D target = new Point2D(xPosition, yPosition)
+                        .subtract(getResizePanelCenter())
+                        .subtract(15, 15);
+
+                /*System.out.printf("view width :%s\n", viewBounds.getWidth());
+                System.out.printf("view height:%s\n", viewBounds.getHeight());
+                System.out.printf("x progress :%s\n", lastProgress.getX());
+                System.out.printf("y progress :%s\n", lastProgress.getY());
+                System.out.printf("target     :%s\n", target);
+                System.out.printf("should be  :%s\n", getResizeCenterInViewPort().subtract(15, 15));
+                System.out.println("==================");*/
+
+                // moveTo(getResizeCenterInViewPort().subtract(15, 15));
+                moveTo(target);
+            });
         }
 
         // updates the viewport's clip to match the new size
@@ -1071,65 +1117,76 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     }
 
     private Rectangle2D getNodeSize() {
+        // gets the associated node
         final Node associatedNode = movementPane.getMovementNode();
 
         // checks that the associated node is not null
         if (associatedNode == null) return new Rectangle2D(0, 0, 0, 0);
 
+        // gets the node's bounds...
         final Bounds bounds = associatedNode.getBoundsInParent();
-        return new Rectangle2D(0, 0, bounds.getWidth(), bounds.getHeight());
-    }
+        // ...and determines its size
+        final double nodeWidth = bounds.getWidth();
+        final double nodeHeight = bounds.getHeight();
 
-    private Rectangle2D getResizePanelSize() {
-        final Bounds bounds = resizePanel.getBoundsInParent();
-        return new Rectangle2D(0, 0, bounds.getWidth(), bounds.getHeight());
-    }
-
-    private double getResizePanelWidth() {
-        return getResizePanelSize().getWidth();
-    }
-
-    private double getResizePanelHeight() {
-        return getResizePanelSize().getHeight();
+        // returns the computed size
+        return new Rectangle2D(
+                0,
+                0,
+                nodeWidth,
+                nodeHeight
+        );
     }
 
     private Rectangle2D getUnscaledNodeSize() {
+        // gets the associated node's size
         final Rectangle2D nodeSize = getNodeSize();
-        return new Rectangle2D(0, 0, nodeSize.getWidth() / zoom.getX(), nodeSize.getHeight() / zoom.getY());
+
+        // determines the node's unscaled size
+        final double unscaledWidth = nodeSize.getWidth() / zoom.getX();
+        final double unscaledHeight = nodeSize.getHeight() / zoom.getY();
+
+        // returns the computed size
+        return new Rectangle2D(
+                0,
+                0,
+                unscaledWidth,
+                unscaledHeight
+        );
     }
 
-    private double getUnscaledNodeWidth() {
-        return getUnscaledNodeSize().getWidth();
-    }
-
-    private double getUnscaledNodeHeight() {
-        return getUnscaledNodeSize().getHeight();
-    }
+    // =======================================
+    //             RESIZE PANEL
+    // =======================================
 
     private Point2D getResizePanelPosition() {
         final Bounds bounds = resizePanel.getBoundsInParent();
         return new Point2D(bounds.getMinX(), bounds.getMinY());
     }
 
-    private double getResizePanelX() {
-        return getResizePanelPosition().getX();
+    private double getResizePanelWidth() {
+        return getNodeSize().getWidth() + resizePanel.getArrowLength() * 2 + resizePanel.getArrowSpace() * 2;
     }
 
-    private double getResizePanelY() {
-        return getResizePanelPosition().getY();
+    private double getResizePanelHeight() {
+        return getNodeSize().getHeight() + resizePanel.getArrowLength() * 2 + resizePanel.getArrowSpace() * 2;
+    }
+
+    private double getUnscaledResizePanelWidth() {
+        return getUnscaledNodeSize().getWidth() + resizePanel.getArrowLength() * 2 + resizePanel.getArrowSpace() * 2;
+    }
+
+    private double getUnscaledResizePanelHeight() {
+        return getUnscaledNodeSize().getHeight() + resizePanel.getArrowLength() * 2 + resizePanel.getArrowSpace() * 2;
     }
 
     private Point2D centerOnResizePanel(final Point2D target) {
         return target.subtract(getResizePanelCenter());
     }
 
-    private Point2D getResizePanelCenter() {
-        return new Point2D(getResizePanelWidth() / 2, getResizePanelHeight() / 2);
-    }
-
-    private Point2D getUnscaledResizePanelCenter() {
-        return getResizePanelCenter().multiply(1 / zoom.getX());
-    }
+    // =======================================
+    //          CENTERING COORDINATES
+    // =======================================
 
     private Point2D getNodeCenter() {
         final Node associatedNode = movementPane.getMovementNode();
@@ -1137,10 +1194,22 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         return new Point2D(bounds.getWidth() / 2, bounds.getHeight() / 2);
     }
 
+    private Point2D getResizePanelCenter() {
+        final double width = getResizePanelWidth();
+        final double height = getResizePanelHeight();
+        return new Point2D(width / 2, height / 2);
+    }
+
+    private Point2D getUnscaledResizePanelCenter() {
+        final double unscaledWidth = getUnscaledResizePanelWidth();
+        final double unscaledHeight = getUnscaledResizePanelHeight();
+        return new Point2D(unscaledWidth / 2, unscaledHeight / 2);
+    }
+
     private Point2D getViewPortCenter() {
         // determines the size of the viewport
-        final double width = viewPort.getWidth();
-        final double height = viewPort.getHeight();
+        final double width = viewPort.getBoundsInParent().getWidth();
+        final double height = viewPort.getBoundsInParent().getHeight();
 
         // determines the center of the viewport
         return new Point2D(width / 2, height / 2);
@@ -1151,24 +1220,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     }
 
     private Point2D getUnscaledResizeCenterInViewPort() {
-        final DropShadow shadow = getCurrentShadow();
-        final Rectangle2D nodeSize = getNodeSize();
-
-        final double unscaledWidth = nodeSize.getWidth() / zoom.getX()
-                + resizePanel.getArrowLength() * 2
-                + resizePanel.getArrowSpace() * 2;
-
-        final double unscaledHeight = nodeSize.getHeight() / zoom.getX()
-                + resizePanel.getArrowLength() * 2
-                + resizePanel.getArrowSpace() * 2;
-
-        final Bounds viewBounds = viewPort.getBoundsInParent();
-
-        final double centerX = (viewBounds.getWidth() - unscaledWidth) / 2;
-
-        final double centerY = (viewBounds.getHeight() - unscaledHeight) / 2;
-
-        return new Point2D(centerX, centerY);
+        return getViewPortCenter().subtract(getUnscaledResizePanelCenter());
     }
 
 }
