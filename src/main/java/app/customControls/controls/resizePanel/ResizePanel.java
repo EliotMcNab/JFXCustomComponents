@@ -55,6 +55,8 @@ public class ResizePanel extends Control {
     private final ObjectProperty<Translate> translate;
     private final ObjectProperty<Scale> scale;
     private final BooleanProperty zoomUpdateProperty;
+    private final DoubleProperty widthProperty;
+    private final DoubleProperty heightProperty;
 
     // pseudo classes
 
@@ -113,6 +115,8 @@ public class ResizePanel extends Control {
         this.translate = new SimpleObjectProperty<>(ResizePanel.this, "translate", DEFAULT_TRANSLATE);
         this.scale = new SimpleObjectProperty<>(ResizePanel.this, "scale", DEFAULT_SCALE);
         this.zoomUpdateProperty = new SimpleBooleanProperty(ResizePanel.this, "zoom-update", false);
+        this.widthProperty = new SimpleDoubleProperty(ResizePanel.this, "width", DEFAULT_NODE.getWidth());
+        this.heightProperty = new SimpleDoubleProperty(ResizePanel.this, "height", DEFAULT_NODE.getHeight());
 
         // pseudo classes initialisation
 
@@ -235,6 +239,14 @@ public class ResizePanel extends Control {
         return zoomUpdateProperty;
     }
 
+    public DoubleProperty resizeNodeWidthProperty() {
+        return widthProperty;
+    }
+
+    public DoubleProperty resizeNodeHeightProperty() {
+        return heightProperty;
+    }
+
     // =====================================
     //               GETTERS
     // =====================================
@@ -265,6 +277,14 @@ public class ResizePanel extends Control {
 
     public Scale getScale() {
         return scale.get();
+    }
+
+    public double getResizeNodeWidth() {
+        return widthProperty.get();
+    }
+
+    public double getResizeNodeHeight() {
+        return heightProperty.get();
     }
 
     @Override
@@ -324,6 +344,19 @@ public class ResizePanel extends Control {
         scale.get().setPivotX(pivotX);
         scale.get().setPivotY(pivotY);
         zoomUpdateProperty.set(false);
+    }
+
+    public void setResizeNodeWidth(final double newWidth) {
+        widthProperty.set(newWidth);
+    }
+
+    public void setResizeNodeHeight(final double newHeight) {
+        heightProperty.set(newHeight);
+    }
+
+    public void setResizeNodeSize(final double newWidth, final double newHeight) {
+        setResizeNodeWidth(newWidth);
+        setResizeNodeHeight(newHeight);
     }
 
     // =====================================

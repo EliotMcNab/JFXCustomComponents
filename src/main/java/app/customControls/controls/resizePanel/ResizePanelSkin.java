@@ -98,6 +98,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     private final EventHandler<MouseEvent> dragListener;
     private final EventHandler<MouseEvent> mouseReleaseListener;
     private final ChangeListener<Boolean> zoomListener;
+    private final InvalidationListener sizeSetListener;
 
     // =====================================
     //              CONSTRUCTOR
@@ -145,6 +146,8 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.wasScaling = false;
         resizePanel.getTransforms().addAll(translate, adjustTranslate);
         resizePanel.getResizeNode().getTransforms().add(scale);
+        resizePanel.replaceTranslate(translate);
+        resizePanel.replaceScale(scale);
 
         // initialising listeners
 
@@ -160,6 +163,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         this.dragListener = this::handleDrag;
         this.mouseReleaseListener = this::handleMouseRelease;
         this.zoomListener = this::updateZoom;
+        this.sizeSetListener = this::setNodeSize;
 
         // initialisation
         style();
@@ -224,6 +228,8 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         resizePanel.arrowColorProperty().addListener(colorChangeListener);
         resizePanel.getResizeNode().setOnMousePressed(nodePressListener);
         resizePanel.selectedProperty().addListener(selectedListener);
+        resizePanel.resizeNodeWidthProperty().addListener(sizeSetListener);
+        resizePanel.resizeNodeHeightProperty().addListener(sizeSetListener);
 
         // arrow property listeners
 
@@ -412,6 +418,22 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
     // =====================================
     //              RESIZING
     // =====================================
+
+    private void setNodeSize(Observable observable) {
+        final double targetWidth = resizePanel.getResizeNodeWidth();
+        final double targetHeight = resizePanel.getResizeNodeHeight();
+        final double currentWidth = getNodeWidth();
+        final double currentHeight = getNodeHeight();
+        final double deltaWidth = targetWidth - currentWidth;
+        final double deltaHeight = targetHeight - currentHeight;
+
+        resizeOnDrag(
+                BOTTOM_RIGHT,
+                new Point2D(deltaWidth / 2, deltaHeight / 2),
+                false,
+                false
+        );
+    }
 
     private void handleDrag(final MouseEvent mouseEvent) {
         // if the mouse is not on an arrow aborts drag
