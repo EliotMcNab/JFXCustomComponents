@@ -6,10 +6,7 @@ import app.customControls.Animations.SmoothScale;
 import app.customControls.Images;
 import app.customControls.controls.resizePanel.ResizePanel;
 import app.customControls.controls.time.TimedAnimation;
-import app.customControls.utilities.CssUtil;
-import app.customControls.utilities.EffectsUtil;
-import app.customControls.utilities.KeyboardUtil;
-import app.customControls.utilities.ScreenUtil;
+import app.customControls.utilities.*;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -110,11 +107,19 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     // animation
 
     private BezierCurve scaleInterpolation;
-    private BezierCurve pivotXInterpolation;
-    private BezierCurve pivotYInterpolation;
-    private BezierCurve dragXInterpolation;
-    private BezierCurve dragYInterpolation;
+    private BezierCurve resetPivotXInterpolation;
+    private BezierCurve resetPivotYInterpolation;
+    private BezierCurve centerXInterpolation;
+    private BezierCurve centerYInterpolation;
+    private BezierCurve centerPivotXInterpolation;
+    private BezierCurve centerPivotYInterpolation;
+    private BezierCurve resetXInterpolation;
+    private BezierCurve resetYInterpolation;
+    private BezierCurve widthInterpolation;
+    private BezierCurve heightInterpolation;
     private final PauseAnimation resetAnimation;
+    private final PauseAnimation centerAnimation;
+    private Rectangle2D originalSize;
 
     // components
 
@@ -184,6 +189,13 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
         // initialising animations
 
+        final Rectangle2D nodeSize = getNodeSize();
+        this.originalSize = new Rectangle2D(
+                0,
+                0,
+                nodeSize.getWidth(),
+                nodeSize.getHeight()
+        );
         updateInterpolation(INTERPOLATION_MODE.ALL);
 
         this.resetAnimation = new PauseAnimation(Duration.millis(RESET_DURATION)) {
@@ -193,6 +205,14 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
             }
         };
         this.resetAnimation.setOnEnd(this::handleResetEnd);
+
+        this.centerAnimation = new PauseAnimation(Duration.millis(RESET_DURATION)) {
+            @Override
+            public void tick(long now) {
+                handleCenterAnimation(now);
+            }
+        };
+        this.centerAnimation.setOnEnd(this::handleCenterEnd);
 
         // initialise properties
 
@@ -570,7 +590,7 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // drops the node in case the user is holding it
         dropNode();
 
-        updateInterpolation(INTERPOLATION_MODE.ALL);
+        updateInterpolation(INTERPOLATION_MODE.RESET);
 
         // starts the reset animation
         if (resetAnimation.isRunning()) return;
@@ -578,32 +598,14 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         animateScrollBarCentering(RESET_DURATION).play();
     }
 
-    private void handleResetEnd(ActionEvent actionEvent) {
-        // TODO: add commenting here
-
-        final Rectangle2D nodeSize = getUnscaledNodeSize();
-
-        zoom.setX(1);
-        zoom.setY(1);
-        zoom.setPivotX(nodeSize.getWidth() / 2);
-        zoom.setPivotY(nodeSize.getHeight() / 2);
-
-        final Point2D resizePanelCenter = getUnscaledResizeCenterInViewPort();
-        drag.setX(resizePanelCenter.getX());
-        drag.setY(resizePanelCenter.getY());
-
-        updateInterpolation(INTERPOLATION_MODE.ALL);
-        updateProgress();
-    }
-
     private void center(final boolean animated) {
         // centers the scroll bars & moves the node to the center
-        if (animated) {
-            final Animation resizePanelCentering = animateNodeCentering(RESET_DURATION);
-            final Animation scrollBarCentering = animateScrollBarCentering(RESET_DURATION);
-            final Animation center = new ParallelTransition(scrollBarCentering, resizePanelCentering);
-            center.play();
-            center.setOnFinished(actionEvent -> updateProgress());
+        if (animated && !centerAnimation.isRunning()) {
+            System.out.println(zoom);
+            System.out.println(getResizeCenterInViewPort());
+            updateInterpolation(INTERPOLATION_MODE.CENTER);
+            centerAnimation.start();
+            animateScrollBarCentering(RESET_DURATION).play();
         }
         else {
             hScroll.setValue(hScroll.getMax() / 2);
@@ -645,13 +647,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                 xProgress,
                 yProgress
         );
-
-        /*System.out.printf("resize panel center:%s\n", resizeCenter);
-        System.out.printf("view port width    :%s\n", viewWidth);
-        System.out.printf("view port height   :%s\n", viewHeight);
-        System.out.printf("x progress         :%s\n", xProgress);
-        System.out.printf("y progress         :%s\n", yProgress);
-        System.out.println("=======================");*/
     }
 
     private void horizontalScroll(ScrollEvent scrollEvent) {
@@ -733,11 +728,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
         // applies zoom to the resize panel
         resizePanel.setZoom(totalZoom.getX(), totalZoom.getY(), totalZoom.getPivotX(), totalZoom.getPivotY());
 
-        // updates the various interpolation functions used to reset the node
-        /*updateInterpolation(INTERPOLATION_MODE.SCALE_INTERPOLATION);
-        updateInterpolation(INTERPOLATION_MODE.PIVOT_X_INTERPOLATION);
-        updateInterpolation(INTERPOLATION_MODE.PIVOT_Y_INTERPOLATION);*/
-
         // updates the node's progress
         updateProgress();
     }
@@ -746,88 +736,141 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
     //               ANIMATION
     // =======================================
 
+    // region INTERPOLATION
+
     private enum INTERPOLATION_MODE {
-        SCALE_INTERPOLATION,
-        PIVOT_X_INTERPOLATION,
-        PIVOT_Y_INTERPOLATION,
-        DRAG_X_INTERPOLATION,
-        DRAG_Y_INTERPOLATION,
+        RESET,
+        CENTER,
         ALL
     }
 
     private void updateInterpolation(final INTERPOLATION_MODE mode) {
-        double min;
-        double max;
-        double tMax;
+        // TODO: refactor the shit out of this
 
-        final Rectangle2D nodeSize = getUnscaledNodeSize();
-        final Point2D center = getUnscaledResizeCenterInViewPort();
-
-        if (mode.equals(INTERPOLATION_MODE.SCALE_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)) {
-            min = 1.0;
-            max = zoom.getX();
-            tMax = RESET_DURATION;
-
-            this.scaleInterpolation = new BezierCurve(
-                    max,
-                    min,
-                    min,
-                    tMax
-            );
+        if (mode.equals(INTERPOLATION_MODE.RESET) || mode.equals(INTERPOLATION_MODE.ALL)) {
+            updateScaleInterpolation();
+            updateResetXInterpolation();
+            updateResetYInterpolation();
+            updateResetPivotXInterpolation();
+            updateResetPivotYInterpolation();
         }
-
-        if (mode.equals(INTERPOLATION_MODE.PIVOT_X_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)) {
-            min = nodeSize.getWidth() / 2;
-            max = zoom.getPivotX();
-            tMax = RESET_DURATION;
-
-            this.pivotXInterpolation = new BezierCurve(
-                    max,
-                    min,
-                    min,
-                    tMax
-            );
-        }
-
-        if (mode.equals(INTERPOLATION_MODE.PIVOT_Y_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)){
-            min = nodeSize.getHeight() / 2;
-            max = zoom.getPivotY();
-            tMax = RESET_DURATION;
-
-            this.pivotYInterpolation = new BezierCurve(
-                    max,
-                    min,
-                    min,
-                    tMax
-            );
-        }
-
-        if (mode.equals(INTERPOLATION_MODE.DRAG_X_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)) {
-            min = center.getX();
-            max = drag.getX();
-            tMax = RESET_DURATION;
-
-            this.dragXInterpolation = new BezierCurve(
-                    max,
-                    min,
-                    min,
-                    tMax
-            );
-        }
-
-        if (mode.equals(INTERPOLATION_MODE.DRAG_Y_INTERPOLATION) || mode.equals(INTERPOLATION_MODE.ALL)) {
-            min = center.getY();
-            max = drag.getY();
-            tMax = RESET_DURATION;
-
-            this.dragYInterpolation = new BezierCurve(
-                    max,
-                    min,
-                    min,
-                    tMax
-            );
+        if (mode.equals(INTERPOLATION_MODE.CENTER) || mode.equals(INTERPOLATION_MODE.ALL)) {
+            updateCenterXInterpolation();
+            updateCenterYInterpolation();
+            updateCenterPivotXInterpolation();
+            updateCenterPivotYInterpolation();
         }
     }
+
+    private void updateScaleInterpolation() {
+        final double min = 1.0;
+        final double max = zoom.getX();
+
+        this.scaleInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateResetXInterpolation() {
+        final double min = getUnscaledResizeCenterInViewPort().getX();
+        final double max = drag.getX();
+
+        this.resetXInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateResetYInterpolation() {
+        final double min = getUnscaledResizeCenterInViewPort().getY();
+        final double max = drag.getY();
+
+        this.resetYInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateResetPivotXInterpolation() {
+        final double min = getUnscaledNodeSize().getWidth() / 2;
+        final double max = zoom.getPivotX();
+
+        this.resetPivotXInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateResetPivotYInterpolation() {
+        final double min = getUnscaledNodeSize().getHeight() / 2;
+        final double max = zoom.getPivotY();
+
+        this.resetPivotYInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateCenterXInterpolation() {
+        final double min = getResizeCenterInViewPort().getX();
+        final double max = drag.getX();
+
+        this.centerXInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateCenterYInterpolation() {
+        final double min = getResizeCenterInViewPort().getY();
+        final double max = drag.getY();
+
+        this.centerYInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateCenterPivotXInterpolation() {
+        final double min = 0;
+        final double max = zoom.getPivotX();
+
+        this.centerPivotXInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    private void updateCenterPivotYInterpolation() {
+        final double min = 0;
+        final double max = zoom.getPivotY();
+
+        this.centerPivotYInterpolation = new BezierCurve(
+                max,
+                min,
+                min,
+                RESET_DURATION
+        );
+    }
+
+    // endregion
 
     private DropShadow getCurrentShadow() {
         return pickup ? NODE_PICKUP_SHADOW : NODE_IDLE_SHADOW;
@@ -835,47 +878,53 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     private void handleResetAnimation(final long now) {
         final double zoom = scaleInterpolation.interpolateAt(now);
-        final double pivotX = pivotXInterpolation.interpolateAt(now);
-        final double pivotY = pivotYInterpolation.interpolateAt(now);
-        final double dragX = dragXInterpolation.interpolateAt(now);
-        final double dragY = dragYInterpolation.interpolateAt(now);
+        final double pivotX = resetPivotXInterpolation.interpolateAt(now);
+        final double pivotY = resetPivotYInterpolation.interpolateAt(now);
+        final double dragX = resetXInterpolation.interpolateAt(now);
+        final double dragY = resetYInterpolation.interpolateAt(now);
 
         resizePanel.setZoom(zoom, zoom, pivotX, pivotY);
         drag.setX(dragX);
         drag.setY(dragY);
     }
 
-    private Animation animateNodeCentering(final long duration) {
-        // determines the path to the node's central position
-        final Point2D resizeCenter = getUnscaledResizeCenterInViewPort();
+    private void handleCenterAnimation(final long now) {
+        final double pivotX = centerPivotXInterpolation.interpolateAt(now);
+        final double pivotY = centerPivotYInterpolation.interpolateAt(now);
+        final double dragX = centerXInterpolation.interpolateAt(now);
+        final double dragY = centerYInterpolation.interpolateAt(now);
 
-        // animates the node being centered
-        final Timeline centerAnimation = new Timeline(
-                new KeyFrame(
-                        Duration.ZERO,
-                        new KeyValue(
-                                drag.xProperty(),
-                                drag.getX()
-                        ),
-                        new KeyValue(
-                                drag.yProperty(),
-                                drag.getY()
-                        )
-                ),
-                new KeyFrame(
-                        Duration.millis(duration),
-                        new KeyValue(
-                                drag.xProperty(),
-                                resizeCenter.getX()
-                        ),
-                        new KeyValue(
-                                drag.yProperty(),
-                                resizeCenter.getY()
-                        )
-                )
-        );
-        // updates the node's progress once the animation is over
-        return centerAnimation;
+        resizePanel.setZoom(zoom.getX(), zoom.getY(), pivotX, pivotY);
+        drag.setX(dragX);
+        drag.setY(dragY);
+    }
+
+    private void handleResetEnd(final ActionEvent actionEvent) {
+        // TODO: add commenting here
+
+        final Rectangle2D nodeSize = getUnscaledNodeSize();
+        zoom.setX(1);
+        zoom.setY(1);
+        zoom.setPivotX(nodeSize.getWidth() / 2);
+        zoom.setPivotY(nodeSize.getHeight() / 2);
+
+        final Point2D resizePanelCenter = getUnscaledResizeCenterInViewPort();
+        drag.setX(resizePanelCenter.getX());
+        drag.setY(resizePanelCenter.getY());
+
+        updateProgress();
+    }
+
+    private void handleCenterEnd(final ActionEvent actionEvent) {
+
+        zoom.setPivotX(0);
+        zoom.setPivotY(0);
+
+        final Point2D resizePanelCenter = getResizeCenterInViewPort();
+        drag.setX(resizePanelCenter.getX());
+        drag.setY(resizePanelCenter.getY());
+
+        updateProgress();
     }
 
     private Animation animateScrollBarCentering(final long duration) {
@@ -1067,15 +1116,6 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
                         .subtract(getResizePanelCenter())
                         .subtract(15, 15);
 
-                /*System.out.printf("view width :%s\n", viewBounds.getWidth());
-                System.out.printf("view height:%s\n", viewBounds.getHeight());
-                System.out.printf("x progress :%s\n", lastProgress.getX());
-                System.out.printf("y progress :%s\n", lastProgress.getY());
-                System.out.printf("target     :%s\n", target);
-                System.out.printf("should be  :%s\n", getResizeCenterInViewPort().subtract(15, 15));
-                System.out.println("==================");*/
-
-                // moveTo(getResizeCenterInViewPort().subtract(15, 15));
                 moveTo(target);
             });
         }
@@ -1113,6 +1153,15 @@ public class MovementPaneSkin extends SkinBase<MovementPane> implements Skin<Mov
 
     protected void bindNode(final Node node) {
         resizePanel.setResizeNode(node);
+
+        final Rectangle2D nodeSize = getNodeSize();
+        originalSize = new Rectangle2D(
+                0,
+                0,
+                nodeSize.getWidth(),
+                nodeSize.getHeight()
+        );
+
         Platform.runLater(() -> center(false));
     }
 

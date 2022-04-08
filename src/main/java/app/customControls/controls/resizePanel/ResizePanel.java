@@ -317,6 +317,7 @@ public class ResizePanel extends Control {
 
     public void setZoom(final double x, final double y, final double pivotX, final double pivotY) {
         if (!validateScale(x, y)) return;
+        // System.out.println("1" + scale.get());
         zoomUpdateProperty.set(true);
         scale.get().setX(x);
         scale.get().setY(y);

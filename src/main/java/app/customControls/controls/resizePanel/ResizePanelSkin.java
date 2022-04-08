@@ -3,6 +3,7 @@ package app.customControls.controls.resizePanel;
 import app.customControls.controls.shapes.Arrow;
 import app.customControls.controls.shapes.Orientation;
 import app.customControls.handlers.delay.DelayHandler;
+import app.customControls.utilities.NodeUtil;
 import app.customControls.utilities.ScreenUtil;
 import app.customControls.utilities.TransformUtil;
 import javafx.application.Platform;
@@ -624,7 +625,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
 
         // resizes the node based on its class
-        setNodeSize(newWidth, newHeight);
+        NodeUtil.setNodeSize(resizePanel.getResizeNode(), newWidth, newHeight);
     }
 
     private boolean canResize(final double deltaWidth, final double deltaHeight) {
@@ -710,7 +711,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // sets the node's with and / or height to 0 depending on which axis is being flipped
         counterMovement(counterWidth, counterHeight, resizeMode, mirrored);
-        setNodeSize(horizontalFlip ? 0 : width, verticalFlip ? 0 : height);
+        NodeUtil.setNodeSize(resizePanel.getResizeNode(), horizontalFlip ? 0 : width, verticalFlip ? 0 : height);
 
         // inverts the resize direction to account for the axis flip
         setResizeDirection(invertDirection(resizeDirection, deltaWidth, deltaHeight));
@@ -771,7 +772,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         counterMovement(deltaWidth, deltaHeight, resizeMode, mirrored);
 
         // updates the node's size
-        setNodeSize(finalWidth, finalHeight);
+        NodeUtil.setNodeSize(resizePanel.getResizeNode(), finalWidth, finalHeight);
     }
 
     private boolean canScale(final Point2D relativeMouseCoordinates) {
@@ -842,7 +843,7 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
 
         // sets the node's size to 0 and counters the associated movement
         counterMovement(counterWidth, counterHeight, resizeMode, mirrored);
-        setNodeSize(0, 0);
+        NodeUtil.setNodeSize(resizePanel.getResizeNode(), 0, 0);
         setResizeDirection(invertScaleDirection(resizeDirection, Math.PI / 2 - nodeAngle, mouseAngle));
     }
 
@@ -866,22 +867,6 @@ public class ResizePanelSkin extends SkinBase<ResizePanel> implements Skin<Resiz
         // counteracts node movement along the required axes
         translate.setX(translate.getX() + counterX);
         translate.setY(translate.getY() + counterY);
-    }
-
-    final void setNodeSize(final double width, final double height) {
-        // gets the associated node
-        final Node resizeNode = resizePanel.getResizeNode();
-
-        // resizes the node depending on its type
-        if (resizeNode instanceof Region) {
-            ((Region) resizeNode).setPrefWidth(Math.abs(width));
-            ((Region) resizeNode).setPrefHeight(Math.abs(height));
-        } else if (resizeNode instanceof Rectangle) {
-            ((Rectangle) resizeNode).setWidth(Math.abs(width));
-            ((Rectangle) resizeNode).setHeight(Math.abs(height));
-        } else if (resizeNode instanceof Circle) {
-            ((Circle) resizeNode).setRadius(Math.abs(width / 2));
-        }
     }
 
     final Rectangle2D getScaledNodeSize(

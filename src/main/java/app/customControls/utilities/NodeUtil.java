@@ -6,6 +6,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.layout.Region;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Transform;
@@ -37,5 +40,18 @@ public class NodeUtil {
     public static Point2D nodeScreenCoordinates(final Node node) {
         Bounds bounds = node.localToScreen(node.getBoundsInLocal());
         return new Point2D(bounds.getMinX(), bounds.getMinY());
+    }
+
+    public static void setNodeSize(final Node node, final double width, final double height) {
+        // resizes the node depending on its type
+        if (node instanceof Region) {
+            ((Region) node).setPrefWidth(Math.abs(width));
+            ((Region) node).setPrefHeight(Math.abs(height));
+        } else if (node instanceof Rectangle) {
+            ((Rectangle) node).setWidth(Math.abs(width));
+            ((Rectangle) node).setHeight(Math.abs(height));
+        } else if (node instanceof Circle) {
+            ((Circle) node).setRadius(Math.abs(width / 2));
+        }
     }
 }
